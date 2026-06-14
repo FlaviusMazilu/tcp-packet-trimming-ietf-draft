@@ -1,0 +1,114 @@
+{
+  "magic": "E!vIA5L86J2I",
+  "timestamp": "2026-06-14T02:39:14.680544+00:00",
+  "repo": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
+  "labels": [
+    {
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    },
+    {
+      "name": "documentation",
+      "description": "Improvements or additions to documentation",
+      "color": "0075ca"
+    },
+    {
+      "name": "duplicate",
+      "description": "This issue or pull request already exists",
+      "color": "cfd3d7"
+    },
+    {
+      "name": "enhancement",
+      "description": "New feature or request",
+      "color": "a2eeef"
+    },
+    {
+      "name": "good first issue",
+      "description": "Good for newcomers",
+      "color": "7057ff"
+    },
+    {
+      "name": "help wanted",
+      "description": "Extra attention is needed",
+      "color": "008672"
+    },
+    {
+      "name": "invalid",
+      "description": "This doesn't seem right",
+      "color": "e4e669"
+    },
+    {
+      "name": "question",
+      "description": "Further information is requested",
+      "color": "d876e3"
+    },
+    {
+      "name": "wontfix",
+      "description": "This will not be worked on",
+      "color": "ffffff"
+    }
+  ],
+  "issues": [],
+  "pulls": [
+    {
+      "number": 1,
+      "id": "PR_kwDOS20dac7lBuFT",
+      "title": "Add draft in markdown format",
+      "url": "https://github.com/FlaviusMazilu/tcp-packet-trimming-ietf-draft/pull/1",
+      "state": "OPEN",
+      "author": "FlaviusMazilu",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2026-06-10T20:23:44Z",
+      "updatedAt": "2026-06-10T21:05:51Z",
+      "baseRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
+      "baseRefName": "main",
+      "baseRefOid": "dec361a16c6c2e8321f61fd0ad125ced0752ea95",
+      "headRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
+      "headRefName": "user/fmazilu/draft",
+      "headRefOid": "46d014eab6741a149ed3191ee5e7ad6edd258801",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": [
+        {
+          "id": "PRR_kwDOS20dac8AAAABCoPpLw",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-10T20:34:28Z",
+          "updatedAt": "2026-06-10T21:05:51Z",
+          "comments": [
+            {
+              "originalPosition": 1,
+              "body": "Not keen on the file carrying my name, can change it to whatever approved, but based on the IETF documentation [1] this seemed the right call\r\n\r\n[1] https://authors.ietf.org/en/naming-your-internet-draft\r\n`This component should consist of a string related to the names(s) of the author(s). The string is typically the last name of the lead author or editor. There are no mechanical rules for this string beyond consisting only of the allowed characters.`",
+              "createdAt": "2026-06-10T20:34:28Z",
+              "updatedAt": "2026-06-10T21:06:09Z"
+            },
+            {
+              "originalPosition": 221,
+              "body": "Not sure here if it's the right thing to lay down the options or should just propose the 'optimal'/intended one",
+              "createdAt": "2026-06-10T20:35:40Z",
+              "updatedAt": "2026-06-10T21:05:51Z"
+            },
+            {
+              "originalPosition": 234,
+              "body": "What I found most fascinating: if Packet Trimming were to be added in all TCP implementations consequently in the internet, then it should be able to coexist with current loss detection mechanisms\n\nWhat I spent the most time this semester was to understand how the current loss detections (RACK-TLP and Duplicate ACK based) could co-exist/interact with Packet Trimming(in regular internet traffic) and I summarized it and included some examples in this section",
+              "createdAt": "2026-06-10T20:42:47Z",
+              "updatedAt": "2026-06-10T21:05:51Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

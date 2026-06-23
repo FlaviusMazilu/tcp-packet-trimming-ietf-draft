@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-06-21T02:43:17.621586+00:00",
+  "timestamp": "2026-06-23T02:11:51.357635+00:00",
   "repo": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
   "labels": [
     {
@@ -63,7 +63,7 @@
       "labels": [],
       "body": "",
       "createdAt": "2026-06-10T20:23:44Z",
-      "updatedAt": "2026-06-10T21:05:51Z",
+      "updatedAt": "2026-06-21T21:46:15Z",
       "baseRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
       "baseRefName": "main",
       "baseRefOid": "dec361a16c6c2e8321f61fd0ad125ced0752ea95",
@@ -105,6 +105,340 @@
               "body": "What I found most fascinating: if Packet Trimming were to be added in all TCP implementations consequently in the internet, then it should be able to coexist with current loss detection mechanisms\n\nWhat I spent the most time this semester was to understand how the current loss detections (RACK-TLP and Duplicate ACK based) could co-exist/interact with Packet Trimming(in regular internet traffic) and I summarized it and included some examples in this section",
               "createdAt": "2026-06-10T20:42:47Z",
               "updatedAt": "2026-06-10T21:05:51Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpEnvQ",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "vali0901",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T07:48:31Z",
+          "updatedAt": "2026-06-21T08:44:48Z",
+          "comments": [
+            {
+              "originalPosition": 221,
+              "body": "I'm okay with the current state, I would suggest using 'SHOULD' insead of 'should', or a stronger word for a recommendation.",
+              "createdAt": "2026-06-21T07:48:31Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 234,
+              "body": "yes, good job! I think this is the right way to introduce TCP TRIMMING to IETF.\nThough, in my perspective, TRIMMING loses a LOT of its power if combined with non-TRIMMING switches, mainly because TRIMMED or NACK packets can get dropped.\nI understand this is no big deal, as other heuristic-based loss detectors can solve the loss really fast, but having played with the Congestion Control side of things, I consider this scenario a (way) less efficient approach, because, when receiving a NACK, we SHOULD do cwnd--, but because we infer loss in other ways, we should do cwnd = cwnd / 2.\nI now believe that TRIMMING TCP is not just a new loss detector mechanism, but it is also a (way) more efficient one. Having a fully-capable trimming network would let tcp endpoints utilize full bandwidth (cwnd--), without halving the rate when hitting saturation point (cwnd=cwnd/2). I believe that, if TRIMMING TCP would get standardized, it should be intended only for full trimming-capable networks. In my opinion, using it in the Internet would not have as much impact (but, of course i might be wrong and i hope we can evaluate this scenario somehow). This is my perspective and i wanted to share it with you. I still believe analyzing the interaction between TRIMMING and other loss detectors is the right thing to do, though i believe it is not the optimal/intended scenario.",
+              "createdAt": "2026-06-21T08:04:53Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 82,
+              "body": "here we are saying that the trimming means that only the transport headers are kept, everything else is dropped. But we should also mention that a small payload portion might be preserved.  ",
+              "createdAt": "2026-06-21T08:14:18Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 115,
+              "body": "again, \"forwards the header\" only. this is the essential idea, we can leave it like that here, but we should change in other places",
+              "createdAt": "2026-06-21T08:15:18Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 171,
+              "body": "The receiver MUST NOT process or deliver any payload data\n\nyes, it should, if the checksum, after trimming, is still healthy. e.g., if the initial packet_len was less than the TRIMMING_THRESHOLD of the switch. In this case, data should be processed, and a new ACK confirming receiving new data + NACK option attached should be sent (upn receiving the NACK, the sender MUST choose not to send a retransmission, bcs the data has been acknowledged, and it should only update cwnd). We can treat this case as another subchapter here? ",
+              "createdAt": "2026-06-21T08:20:03Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 181,
+              "body": "same as above, maybe here we should tackle the Correct checksum case",
+              "createdAt": "2026-06-21T08:21:30Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 197,
+              "body": "should -> SHOULD, although MUST would be better?",
+              "createdAt": "2026-06-21T08:22:47Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 199,
+              "body": "subject to congestion window and flow control limits\n\nI dont know if i agree, i still consider that forcefully retransmitting, regardless of cwnd value, might be better. In my tests, forcing retransmissions did not bring any apocalyptic behavior, as I would have expected.\n\n\nthe data sender MUST ignore the NACK and MUST NOT proceed to [](#entering-fast-recovery).\n\ni think it should enter in fast recovery if the NACK was sent for a TRIMMED packet (but with ok checksum, the case explored earlier). Maybe a sender MUST enter fast-recovery, if it receives a NACK for unACKed data, or a NACK for a data that is acknowledges by this ACK (case in which, it would enter fast recovery, then exit it immediately -> another reason for a dedicated CC scheme, this scenario would reduce sending rate by half for just a small packet that was, anyway, processed). I need your opinion here, it gets tricky. Should the sender enter fast recovery for a NACK that acknowledges the lost data? I would say no (i dont like the halving of cwnd), but i still believe some congestion-control measures should take place (cwnd-- would be perfect)",
+              "createdAt": "2026-06-21T08:24:59Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 207,
+              "body": "What happens, for the default TCP, if more losses are signaled when already in RECOVERY state?\n\nI am asking because, in our implementation, i have enforced the following property:\nWhen receiving a NACK, enter RECOVERY. When receiving a NACK in RECOVERY, extend the RECOVERY period by the current highest unACKed data byte (from what i have seen, when entering Recovery, the sequence number of the highest unacknowledged sent data is saved, so, upon receiving an ACK for that seq_num, we exit RECOVERY). \n\nWhat does, for example, Fast Retransmit if it detects another loss when already in RECOVERY? from what i remember, it does not retransmit, and lets RTO solve the issue. I think needs a longer debate, because, as you said, more NACKs are expected in a flight, so, we somehow need to make sure to (a) extend the recovery period and (b) make sure the sender retransmits regardless of the RECOVERY state ",
+              "createdAt": "2026-06-21T08:39:55Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            },
+            {
+              "originalPosition": 211,
+              "body": "i think here we should reference the TRIMMING spec, we dont introduce this, but because of TRIMMING spec, we MUST use the DSCP codepoints.",
+              "createdAt": "2026-06-21T08:41:08Z",
+              "updatedAt": "2026-06-21T08:44:48Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpkhSQ",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T15:09:17Z",
+          "updatedAt": "2026-06-21T15:09:17Z",
+          "comments": [
+            {
+              "originalPosition": 221,
+              "body": "Check RFC 2119 - these keywords must be used only for referring to what implementers should follow. For regular occurrences of the word it shouldn't be capitalised. My initial intent for this sentence was just an explanation for what follows. I'm not sure if implementers of the mechanism in the TCP stack have any control of this priority mapping, but if they do, you have a valid point there should be something mentioned about this topic, with an appropriate Keyword",
+              "createdAt": "2026-06-21T15:09:17Z",
+              "updatedAt": "2026-06-21T15:09:17Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpu1rg",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "vali0901",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T17:37:53Z",
+          "updatedAt": "2026-06-21T17:37:54Z",
+          "comments": [
+            {
+              "originalPosition": 221,
+              "body": "well, in our implementation, you specifically set the priority of NACKs to DSCP_CONTROL, I would say it is an indication to implementers, to use the marking that they find fit in order to bypas the low priority queue.",
+              "createdAt": "2026-06-21T17:37:53Z",
+              "updatedAt": "2026-06-21T17:37:54Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpvNXw",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T17:43:24Z",
+          "updatedAt": "2026-06-21T17:43:24Z",
+          "comments": [
+            {
+              "originalPosition": 234,
+              "body": "Wholeheartedly agree that you can reap the best performance and benefits out of a fully trimming enabled network. \n\nLosses of NACKs indeed were not mentioned and its definitely a valid thing that could happen - although are not as severe, I'd presume for the following reasons:\n- if the congestion happens on the forward path, it doesn't need to happen on the backward path(which will be NACK's path). Which in the case of incast, the interface of the switch closest to the destination gets congested, but the returning NACKs will be placed on the other interface's buffers instead. It still can happen that NACKs will be eventually dropped, no doubt about it\n- NACKs are pretty lightweight in size, its more unlikely they will cause congestion/will have the buffer reach 0 space remaining\n\nThis is a good discussion to have with Costin too about scoping/targeting TCP packet trimming as a Datacenter/controlled fully trimming enabled network or broader internet too",
+              "createdAt": "2026-06-21T17:43:24Z",
+              "updatedAt": "2026-06-21T17:43:24Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpvnww",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T17:50:16Z",
+          "updatedAt": "2026-06-21T17:50:16Z",
+          "comments": [
+            {
+              "originalPosition": 82,
+              "body": "Agree. I didn't want to go in too much details about this in the introduction, so I think I went in discussing this in more details in later chapters. \nBut yes, this is contradicting info, and without going in specifics, I think this can be improved to give a slight more accurate statement",
+              "createdAt": "2026-06-21T17:50:16Z",
+              "updatedAt": "2026-06-21T17:50:16Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpwcZg",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T18:03:45Z",
+          "updatedAt": "2026-06-21T18:03:45Z",
+          "comments": [
+            {
+              "originalPosition": 171,
+              "body": "Correct\n\nAnd yes, this would be the right section to discuss this, although the discussion about reducing cwnd might be better suited in Data Sender Behavior to keep matters organised - provided there are some specific things the data sender should do about this",
+              "createdAt": "2026-06-21T18:03:45Z",
+              "updatedAt": "2026-06-21T18:03:45Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpwq2w",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T18:07:16Z",
+          "updatedAt": "2026-06-21T18:07:16Z",
+          "comments": [
+            {
+              "originalPosition": 197,
+              "body": "Agree",
+              "createdAt": "2026-06-21T18:07:16Z",
+              "updatedAt": "2026-06-21T18:07:16Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpw70g",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T18:11:32Z",
+          "updatedAt": "2026-06-21T18:11:32Z",
+          "comments": [
+            {
+              "originalPosition": 221,
+              "body": "Fair",
+              "createdAt": "2026-06-21T18:11:32Z",
+              "updatedAt": "2026-06-21T18:11:32Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDpyYwg",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T18:35:17Z",
+          "updatedAt": "2026-06-21T18:35:17Z",
+          "comments": [
+            {
+              "originalPosition": 199,
+              "body": "subject to congestion window and flow control limits\n\nI just remembered that in classic reno behavior exactly for this reason, while in Congestion Avoidance state you'd 'artificially' increment the cwnd with 1 MSS for every duplicate Ack received, as opposed to keeping the regular behavior of 1 MSS per RTT.\n\nSo yes, remembering this I'm much more onboard with this.\n\nOne thing that needs to be checked I think - NACKs themselves provide an ACK, so how come Reno behavior I mentioned above doesn't apply. The answer to this question is related to SACKs. inflight < cwnd, 'pipe' measurement etc is introduced by RFC 6675 afaik, but are used in Linux for every type of loss detection(are they, even when sacks are off and reno is on? Is this inflight < cwnd due to PRR?)\n\nSo the options here would be: do a bypass for NACK triggered retransmissions(but we'd need to verify it later doesn't screw with the inflight estimations and stuff), or adapt the formula to account for NACKs too. ",
+              "createdAt": "2026-06-21T18:35:17Z",
+              "updatedAt": "2026-06-21T18:35:17Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDp2DOA",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T19:25:00Z",
+          "updatedAt": "2026-06-21T19:25:01Z",
+          "comments": [
+            {
+              "originalPosition": 199,
+              "body": "the data sender MUST ignore the NACK and MUST NOT proceed to\n\n\nYes, I do agree with you that Data Sender should nonetheless enter Fast Recovery\n\nRegarding the cwnd reduction to cwnd/2 for only a small packet - it should not matter, its just an indication of congestion. Same thing happens for regular ECN marking too(except dctcp) and for lost packets caught by current lost detection mechanisms\n\n\n\"or a NACK for a data that is acknowledges by this ACK (case in which, it would enter fast recovery, then exit it immediately\" - not true, it tricked me at first, but actually it leaves Recovery state when high_seq is acked(highest sequence number transmitted in the flight at the time of entering recovery)\n\n\"Should the sender enter fast recovery for a NACK that acknowledges the lost data?\" - what do you mean by this, NACKs that advance the snd.una, aka acknowledging new data?",
+              "createdAt": "2026-06-21T19:25:01Z",
+              "updatedAt": "2026-06-21T19:25:01Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDp2Nkw",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T19:27:44Z",
+          "updatedAt": "2026-06-21T19:27:44Z",
+          "comments": [
+            {
+              "originalPosition": 211,
+              "body": "Correct",
+              "createdAt": "2026-06-21T19:27:44Z",
+              "updatedAt": "2026-06-21T19:27:44Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDp3gDA",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T19:39:55Z",
+          "updatedAt": "2026-06-21T19:39:55Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "This is true for classic Reno, NewReno can catch multiple losses in a flight\nFor scenarios were you penalise the cwnd/2 it makes the most sense to not advance the high_seq, since this is the marking that tells you 'a flight of packets has passed, from now on, if new losses occur, start a new recovery phase that will trigger reduction of cwnd again'\n\nI'm not sure even for NACKs with the custom CC makes the most sense to update this high_seq. Can you check what happens for DCTCP? Since that 'weighted'(g, alpha params stuff) formula for computing cwnd should be applied per flight i think",
+              "createdAt": "2026-06-21T19:39:55Z",
+              "updatedAt": "2026-06-21T19:39:55Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDp93Bw",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "vali0901",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T21:24:44Z",
+          "updatedAt": "2026-06-21T21:24:44Z",
+          "comments": [
+            {
+              "originalPosition": 199,
+              "body": "1. \"So the options here would be: do a bypass for NACK triggered retransmissions(but we'd need to verify it later doesn't screw with the inflight estimations and stuff), or adapt the formula to account for NACKs too.\"\r\n\r\nthe inflight estimation is not messed up with. When a NACK comes, a segment is marked as lost, and the lost_out and retr_out are incremented by this action (this lost_out decreases inflight, while retr_out increases it, therefore, packets_in_flight stays the same); the problem is that CC decreases cwnd, which might get lower than packets_in_flight. SACK helps this because every ACK or dupACK will decrease packets_in_flight, therefore, all the NACKs from a flight of data will be \"released\" by all the other ACKs and dupACKs in the same RTT.\r\ni am not sure about your question / confusion, but i can assure you cwnd > inflight check is done regardless of SACK being on or off. Secondly, i know that PRR sets cwnd = inflight + sndCnt; that sndCnt can be 0, so no, PRR is not a decisive factor in reducing inflight. SACk is the most decisive one\r\nAlso, regarding this topic, i really really dont like to be dependent on another option, so forcefully-triggering the retransmission sound better to me.\r\n\r\nSo, in conclusion, this should (maybe) be brough up with Costin as well!\r\n\r\n2. \"Should the sender enter fast recovery for a NACK that acknowledges the lost data?\"\r\n\r\nI was referring to the small TRIMMED segment, with valid checksum. A NACK would be generated for seq_num=x, while the ACK wrapping the NACK would have seq_num=x+10 (meaning the data was processed). I was not precise enough, my bad.\r\n\r\n\" actually it leaves Recovery state when high_seq is acked\" - right! thank you! forgot this part...\r\n\r\nI just want to add that we might have a tricky situation here, for the small TRIMMED segments. We have both a NACK and a cumulative ACK to process. Here are the 2 situations:\r\n-> Firstly, process the ACK, then the NACK; processing the ACK first will remove from the retr_queue the \"lost\" segment. Then, when processing the NACK, we will not retransmit anything because that seq_num is no longer in the queue, so thats good. BUT we still should enter Fast Recovery; this opens up an attack, where a malicious agent would attach to every cumulative ACK a NACK containing a random seq_number, forcing the endpoint to reduce cwnd. is this a problem? is it not he same if a malicious agent would mark ACKs with Congestion Experienced for ECN? Any mitigation that i can thing of might be easily bypass-able by an attacker\r\n-> Firstly process the NACK, then the ACK; here, we have the advantage that we can check if the NACK is authentic, as we can see if there really is a recent sent segment that awaits confirmation in retr_queue, and enforcing Fast Retransmission entry only if the segment is found in the queue. But because the segment was found in the retransmission queue, we should retransmit it, we dont know yet that this segment was ACKed now, as we did not process the ACK yet! Here we can either accept the cost of a small retransmission, or enforce an additional check upon NACK processing, ensuring the NACKed segment is not confirmed already by this ACK\r\n\r\nI dont even know if this is worth discussing, i dont remember if Linux, for example, processes options or ACK first.",
+              "createdAt": "2026-06-21T21:24:44Z",
+              "updatedAt": "2026-06-21T21:24:44Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABDp_Hkw",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "vali0901",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-21T21:46:15Z",
+          "updatedAt": "2026-06-21T21:46:15Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "well, i had to update the high_seq  for every incoming NACK because there were a lot of warnings telling me that there are LOST or RETRANSMITTED packets in TCP_OPEN state (the state of no congestion). Maybe this should be analyzed further, why this happens, but i think, because cwnd is still high, it is possible that the sender also sent data packets with seq_num > high_seq, resulting in a (reordered) NACK(seq_num) that arrives immediately before the finish of recovery, i.e. when an ACK(high_seq) arrives. is it a bad thing to stay in recovery that long? I guess for usual RENO CC it is, because at the end of it, cwnd = (the old) cwnd/2, but in our custom CC, it is not re-updated\r\n\r\nDCTCP computes alpha continuously, regardless of the congestion state. It just remembers the snd_next sequence number (at init and on every \"end of window\"), and when it sees an ACK for that saved snd_sext, it concludes that a window has ended, computes and stores alpha, resets local snd_next and other vars. Then, when the TCP core sees loss, it asks the active CC module for a new ssthresh value, which, using PRR will be the next cwnd value over time (here, on this request, DCTCP uses alpha to compute the future cwnd value; but the actual state machine is not touched at all, core TCP does it).\r\n\r\nI re-read this part again, and this also does not sit right with me:\r\n\"By entering Fast Recovery, the data sender ensures that the congestion window is appropriately updated just once for the entire loss episode\"\r\nWell, if we are going to have our custom CC, a sender MUST reduce cwnd multiple times for the entire loss episode (multiple cwnd-- per NACK). Maybe we should introduce a different CA state for NACKs? I feel this would simply all this friction we got from dealing with Recovery and cwnd \\= 2 (and would make CC design much simpler too, for example, the CC i did could never differentiate from a dupACK loss and NACK loss). I understand it is nicer to place all the LOSS under the same umbrella of Recovery, but a NACK loss is so much different and more powerful than a dupACK loss. ",
+              "createdAt": "2026-06-21T21:46:15Z",
+              "updatedAt": "2026-06-21T21:46:15Z"
             }
           ]
         }

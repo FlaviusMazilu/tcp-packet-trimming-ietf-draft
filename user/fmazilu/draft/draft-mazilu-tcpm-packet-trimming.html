@@ -11,21 +11,22 @@
 <meta content="
        This document specifies a TCP extension for packet trimming. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery. 
     " name="description">
-<meta content="xml2rfc 3.33.0" name="generator">
+<meta content="xml2rfc 3.34.0" name="generator">
 <meta content="draft-mazilu-tcpm-packet-trimming-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.33.0
-    Python 3.12.13
-    ConfigArgParse 1.7
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
-    lxml 6.0.2
-    platformdirs 4.9.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.7.0
+    wcwidth 0.8.1
 -->
 <link href="draft-mazilu-tcpm-packet-trimming.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1048,7 +1049,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Mazilu, et al.</td>
-<td class="center">Expires 12 December 2026</td>
+<td class="center">Expires 25 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1061,12 +1062,12 @@ svg {
 <dd class="internet-draft">draft-mazilu-tcpm-packet-trimming-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-10" class="published">10 June 2026</time>
+<time datetime="2026-06-23" class="published">23 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-12">12 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-25">25 December 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1108,7 +1109,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 12 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1197,18 +1198,57 @@ svg {
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-congestion-control-consider" class="internal xref">Congestion Control Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-magnitude-of-the-congestion" class="internal xref">Magnitude of the Congestion Response</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
-                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-preserving-a-retransmission" class="internal xref">Preserving a Retransmission Opportunity</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-authoritative-signal-no-und" class="internal xref">Authoritative Signal: No Undo</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-tcp-options" class="internal xref">TCP Options</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-differentiated-services-cod" class="internal xref">Differentiated Services Codepoints</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-forged-nack-injection" class="internal xref">Forged NACK Injection</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-risks-of-bypassing-the-tcp-" class="internal xref">Risks of Bypassing the TCP Checksum</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-dscp-remarking-and-priority" class="internal xref">DSCP Remarking and Priority Abuse</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1596,15 +1636,151 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 </div>
 </section>
 </div>
-<div id="sec-combined-references">
+<div id="congestion-control-considerations">
 <section id="section-8">
+      <h2 id="name-congestion-control-consider">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-congestion-control-consider" class="section-name selfRef">Congestion Control Considerations</a>
+      </h2>
+<p id="section-8-1">A trimmed packet is an explicit and authoritative indication of network congestion: a switch removed the payload precisely because a queue exceeded its threshold. Each NACK therefore conveys both a loss to be repaired and a congestion signal to be obeyed. A trimming sender MUST treat the receipt of a NACK as an indication of congestion and reduce its sending rate, just as it would for a segment loss detected by other means <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<div id="magnitude-of-the-congestion-response">
+<section id="section-8.1">
+        <h3 id="name-magnitude-of-the-congestion">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-magnitude-of-the-congestion" class="section-name selfRef">Magnitude of the Congestion Response</a>
+        </h3>
+<p id="section-8.1-1">Because trimming reports loss on a per-segment basis, a sender learns the exact number of segments lost in a flight rather than merely inferring that at least one segment was lost. This permits a congestion response proportional to the measured loss. A sender SHOULD reduce its congestion window by one segment for each distinct trimmed segment reported (that is, once per NACK), rather than applying a single multiplicative decrease for the whole episode. The congestion window MUST NOT be reduced below the minimum permitted by <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span>.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">As described in <a href="#entering-fast-recovery" class="auto internal xref">Section 5.2</a>, all NACKs that belong to the same flight are handled within a single recovery episode. The per-NACK reductions accumulate over that episode, so the total reduction tracks the severity of the congestion while the sender still enters recovery only once. This avoids both under-reacting, when a single decrease would ignore the loss of many segments, and over-reacting, when repeated multiplicative decreases would punish a single congestion event many times over.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="preserving-a-retransmission-opportunity">
+<section id="section-8.2">
+        <h3 id="name-preserving-a-retransmission">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-preserving-a-retransmission" class="section-name selfRef">Preserving a Retransmission Opportunity</a>
+        </h3>
+<p id="section-8.2-1">A NACK obligates the sender to retransmit the named segment. If the congestion response drives the congestion window below the current number of packets in flight, the sender may be unable to transmit that retransmission until a later ACK reopens the window; in the worst case the segment is not repaired until an RTO, defeating the purpose of trimming. A sender MAY therefore ensure that a NACK-triggered retransmission can be sent promptly even when the reduced congestion window would otherwise be smaller than the number of packets in flight. The Proportional Rate Reduction approach <span>[<a href="#RFC6937" class="cite xref">RFC6937</a>]</span> satisfies this naturally, because it preserves at least one segment of sending allowance on the first transmission of a recovery episode. Or, alternatively, a sender MAY allow a retransmission signaled by a NACK to bypass the congestion window limit, provided that the sender does not exceed the congestion window for any other new data transmissions.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authoritative-signal-no-undo">
+<section id="section-8.3">
+        <h3 id="name-authoritative-signal-no-und">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-authoritative-signal-no-und" class="section-name selfRef">Authoritative Signal: No Undo</a>
+        </h3>
+<p id="section-8.3-1">TCP implementations commonly undo a congestion-window reduction once a loss is shown to have been spurious, for example when reordering was mistaken for loss. A NACK is generated only after a switch has actually removed a payload, so the associated loss is never spurious. A sender MUST NOT undo the congestion-window reduction caused by a NACK. Reductions caused by inference-based mechanisms that remain enabled, such as DupAck or RACK-TLP, may still be undone under their own rules; see <a href="#interaction-with-existing-loss-detection-mechanisms" class="auto internal xref">Section 7</a>.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-9">
+      <h2 id="name-iana-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="tcp-options">
+<section id="section-9.1">
+        <h3 id="name-tcp-options">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-tcp-options" class="section-name selfRef">TCP Options</a>
+        </h3>
+<p id="section-9.1-1">This document defines two new TCP options that require assignment from the "TCP Option Kind Numbers" registry <span>[<a href="#RFC9293" class="cite xref">RFC9293</a>]</span>. IANA is requested to assign two values:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Kind</th>
+              <th class="text-left" rowspan="1" colspan="1">Length</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">TBD1</td>
+              <td class="text-left" rowspan="1" colspan="1">2</td>
+              <td class="text-left" rowspan="1" colspan="1">Trimming Permitted</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">TBD2</td>
+              <td class="text-left" rowspan="1" colspan="1">6</td>
+              <td class="text-left" rowspan="1" colspan="1">Trimming NACK</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-9.1-3">The option formats are specified in <a href="#capability-negotiation-trimming-permitted" class="auto internal xref">Section 3.1</a> and <a href="#trimming-nack-option" class="auto internal xref">Section 3.2</a>. Prior to the assignment of permanent Kind values, experimental deployments can carry these options using the shared experimental option Kinds and an Experiment Identifier as described in <span>[<a href="#RFC6994" class="cite xref">RFC6994</a>]</span>.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="differentiated-services-codepoints">
+<section id="section-9.2">
+        <h3 id="name-differentiated-services-cod">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-differentiated-services-cod" class="section-name selfRef">Differentiated Services Codepoints</a>
+        </h3>
+<p id="section-9.2-1">This document does not request any new assignments from the Differentiated Services Field Codepoints registry. The trimmable, trimmed, and control service classes used in this document (see <a href="#dscp-marking-strategy" class="auto internal xref">Section 6</a>) are realized with existing Differentiated Services codepoints <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span> selected by local or domain policy. The names DSCP_TRIMMABLE, DSCP_TRIMMED, and DSCP_CONTROL are placeholders for those locally configured codepoints and do not denote new codepoint assignments.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
+      <h2 id="name-security-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-10-1">The mechanisms in this document add a new control signal, the NACK, and rely on Differentiated Services markings to convey trimming events. Packet trimming is primarily intended for deployment within a single administrative domain, such as a data center, where the path is largely trusted. The analysis below also notes the residual risks that apply when traffic crosses a less trusted path.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="forged-nack-injection">
+<section id="section-10.1">
+        <h3 id="name-forged-nack-injection">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-forged-nack-injection" class="section-name selfRef">Forged NACK Injection</a>
+        </h3>
+<p id="section-10.1-1">An attacker who can inject a TCP segment carrying a forged Trimming NACK option for an existing connection can attempt to force the sender to retransmit a segment, wasting bandwidth and provoking an unwarranted reduction of the congestion window. Several factors bound this attack:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-2.1">
+            <p id="section-10.1-2.1.1">A NACK is acted upon only when it arrives on a segment that passes the connection's normal demultiplexing checks. An off-path attacker must therefore guess the connection's four-tuple, as for any spoofed TCP segment.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-2.2">
+            <p id="section-10.1-2.2.1">As required in <a href="#identifying-and-retransmitting-the-lost-segment" class="auto internal xref">Section 5.1</a>, the sender MUST ignore a NACK whose sequence number does not correspond to an outstanding unacknowledged segment. A forged NACK is effective only for an in-window sequence number, which confines the attack to the same blind in-window space analyzed in <span>[<a href="#RFC5961" class="cite xref">RFC5961</a>]</span>.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-2.3">
+            <p id="section-10.1-2.3.1">A retransmission provoked by a forged NACK carries only data the receiver legitimately expects; it cannot cause the receiver to accept incorrect data. The impact is limited to wasted bandwidth and an unnecessary congestion-window reduction.<a href="#section-10.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.1-3">To bound the congestion impact, the response to a NACK SHOULD be no larger than the response to an equivalent loss inferred by other means, so that a forged NACK is no more damaging than a forged duplicate acknowledgment. Implementations MAY additionally rate-limit the retransmissions and congestion reactions driven by NACKs.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="risks-of-bypassing-the-tcp-checksum">
+<section id="section-10.2">
+        <h3 id="name-risks-of-bypassing-the-tcp-">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-risks-of-bypassing-the-tcp-" class="section-name selfRef">Risks of Bypassing the TCP Checksum</a>
+        </h3>
+<p id="section-10.2-1">As described in <a href="#bypassing-tcp-checksum-validation" class="auto internal xref">Section 4.1</a>, a receiver skips TCP checksum validation for a trimmed packet, because the checksum was computed over the original payload and is necessarily invalid once the payload has been removed. This weakens the end-to-end integrity check for the header of a trimmed packet, so corruption of those header fields may pass undetected.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see <a href="#ignoring-remaining-payload" class="auto internal xref">Section 4.2</a>). Undetected corruption therefore cannot deliver wrong data to the application; at worst it yields a NACK for the wrong connection or sequence number. A NACK that matches no connection is discarded, and a NACK with a wrong sequence number is bounded exactly as a forged NACK is: it is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK <span>[<a href="#RFC2883" class="cite xref">RFC2883</a>]</span>.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="dscp-remarking-and-priority-abuse">
+<section id="section-10.3">
+        <h3 id="name-dscp-remarking-and-priority">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-dscp-remarking-and-priority" class="section-name selfRef">DSCP Remarking and Priority Abuse</a>
+        </h3>
+<p id="section-10.3-1">This specification places control traffic, including NACKs, and trimmed packets into higher-priority service classes than ordinary trimmable data (see <a href="#dscp-marking-strategy" class="auto internal xref">Section 6</a>). Where traffic can cross a trust boundary, this raises two DSCP-related concerns:<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.3-2.1">
+            <p id="section-10.3-2.1.1">Priority theft: an attacker that sets the control or trimmed-class codepoint on its own traffic could obtain preferential queueing, claiming an unfair share of capacity or degrading the latency of legitimate control traffic.<a href="#section-10.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-2.2">
+            <p id="section-10.3-2.2.1">Trimming evasion: an attacker that clears the trimmable codepoint on its flows could render them ineligible for trimming, escaping the congestion response that trimming imposes and competing unfairly with conforming flows.<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.3-3">Both are instances of the general Differentiated Services trust model <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span> <span>[<a href="#RFC2475" class="cite xref">RFC2475</a>]</span>: DSCP markings arriving from outside a trust boundary cannot be relied upon. A trimming-enabled domain MUST treat its boundary as a trust boundary and police or re-mark the DSCP of ingress traffic, so that the trimmable, trimmed, and control codepoints carry their intended meaning only within the domain that enforces them.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
       <h2 id="name-references">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-8.1">
+<section id="section-11.1">
         <h3 id="name-normative-references">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="RFC2119">[RFC2119]</dt>
@@ -1631,14 +1807,18 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-8.2">
+<section id="section-11.2">
         <h3 id="name-informative-references">
-<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="RFC2018">[RFC2018]</dt>
         <dd>
 <span class="refAuthor">Mathis, M.</span>, <span class="refAuthor">Mahdavi, J.</span>, <span class="refAuthor">Floyd, S.</span>, and <span class="refAuthor">A. Romanow</span>, <span class="refTitle">"TCP Selective Acknowledgment Options"</span>, <span class="seriesInfo">RFC 2018</span>, <span class="seriesInfo">DOI 10.17487/RFC2018</span>, <time datetime="1996-10" class="refDate">October 1996</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2018">https://www.rfc-editor.org/info/rfc2018</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2475">[RFC2475]</dt>
+        <dd>
+<span class="refAuthor">Blake, S.</span>, <span class="refAuthor">Black, D.</span>, <span class="refAuthor">Carlson, M.</span>, <span class="refAuthor">Davies, E.</span>, <span class="refAuthor">Wang, Z.</span>, and <span class="refAuthor">W. Weiss</span>, <span class="refTitle">"An Architecture for Differentiated Services"</span>, <span class="seriesInfo">RFC 2475</span>, <span class="seriesInfo">DOI 10.17487/RFC2475</span>, <time datetime="1998-12" class="refDate">December 1998</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2475">https://www.rfc-editor.org/info/rfc2475</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2883">[RFC2883]</dt>
         <dd>
@@ -1647,6 +1827,10 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 <dt id="RFC3168">[RFC3168]</dt>
         <dd>
 <span class="refAuthor">Ramakrishnan, K.</span>, <span class="refAuthor">Floyd, S.</span>, and <span class="refAuthor">D. Black</span>, <span class="refTitle">"The Addition of Explicit Congestion Notification (ECN) to IP"</span>, <span class="seriesInfo">RFC 3168</span>, <span class="seriesInfo">DOI 10.17487/RFC3168</span>, <time datetime="2001-09" class="refDate">September 2001</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc3168">https://www.rfc-editor.org/info/rfc3168</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5961">[RFC5961]</dt>
+        <dd>
+<span class="refAuthor">Ramaiah, A.</span>, <span class="refAuthor">Stewart, R.</span>, and <span class="refAuthor">M. Dalal</span>, <span class="refTitle">"Improving TCP's Robustness to Blind In-Window Attacks"</span>, <span class="seriesInfo">RFC 5961</span>, <span class="seriesInfo">DOI 10.17487/RFC5961</span>, <time datetime="2010-08" class="refDate">August 2010</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5961">https://www.rfc-editor.org/info/rfc5961</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC6298">[RFC6298]</dt>
         <dd>
@@ -1659,6 +1843,14 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 <dt id="RFC6675">[RFC6675]</dt>
         <dd>
 <span class="refAuthor">Blanton, E.</span>, <span class="refAuthor">Allman, M.</span>, <span class="refAuthor">Wang, L.</span>, <span class="refAuthor">Jarvinen, I.</span>, <span class="refAuthor">Kojo, M.</span>, and <span class="refAuthor">Y. Nishida</span>, <span class="refTitle">"A Conservative Loss Recovery Algorithm Based on Selective Acknowledgment (SACK) for TCP"</span>, <span class="seriesInfo">RFC 6675</span>, <span class="seriesInfo">DOI 10.17487/RFC6675</span>, <time datetime="2012-08" class="refDate">August 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6675">https://www.rfc-editor.org/info/rfc6675</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6937">[RFC6937]</dt>
+        <dd>
+<span class="refAuthor">Mathis, M.</span>, <span class="refAuthor">Dukkipati, N.</span>, and <span class="refAuthor">Y. Cheng</span>, <span class="refTitle">"Proportional Rate Reduction for TCP"</span>, <span class="seriesInfo">RFC 6937</span>, <span class="seriesInfo">DOI 10.17487/RFC6937</span>, <time datetime="2013-05" class="refDate">May 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6937">https://www.rfc-editor.org/info/rfc6937</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6994">[RFC6994]</dt>
+        <dd>
+<span class="refAuthor">Touch, J.</span>, <span class="refTitle">"Shared Use of Experimental TCP Options"</span>, <span class="seriesInfo">RFC 6994</span>, <span class="seriesInfo">DOI 10.17487/RFC6994</span>, <time datetime="2013-08" class="refDate">August 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6994">https://www.rfc-editor.org/info/rfc6994</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8985">[RFC8985]</dt>
         <dd>

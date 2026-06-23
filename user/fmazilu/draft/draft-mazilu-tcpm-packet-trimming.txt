@@ -5,8 +5,8 @@
 tcpm Working Group                                             F. Mazilu
 Internet-Draft                                                 V. Bobaru
 Intended status: Standards Track                               C. Raiciu
-Expires: 12 December 2026                                            UPB
-                                                            10 June 2026
+Expires: 25 December 2026                                            UPB
+                                                            23 June 2026
 
 
                      TCP Packet Trimming Extension
@@ -36,7 +36,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 December 2026.
+   This Internet-Draft will expire on 25 December 2026.
 
 Copyright Notice
 
@@ -71,9 +71,20 @@ Table of Contents
    7.  Interaction with Existing Loss Detection Mechanisms
      7.1.  Interaction with RACK-TLP
      7.2.  Interaction with DupAck (NewReno / SACK)
-   8.  References
-     8.1.  Normative References
-     8.2.  Informative References
+   8.  Congestion Control Considerations
+     8.1.  Magnitude of the Congestion Response
+     8.2.  Preserving a Retransmission Opportunity
+     8.3.  Authoritative Signal: No Undo
+   9.  IANA Considerations
+     9.1.  TCP Options
+     9.2.  Differentiated Services Codepoints
+   10. Security Considerations
+     10.1.  Forged NACK Injection
+     10.2.  Risks of Bypassing the TCP Checksum
+     10.3.  DSCP Remarking and Priority Abuse
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
    Authors' Addresses
 
 1.  Introduction
@@ -537,9 +548,188 @@ Table of Contents
 
                                   Figure 7
 
-8.  References
+8.  Congestion Control Considerations
 
-8.1.  Normative References
+   A trimmed packet is an explicit and authoritative indication of
+   network congestion: a switch removed the payload precisely because a
+   queue exceeded its threshold.  Each NACK therefore conveys both a
+   loss to be repaired and a congestion signal to be obeyed.  A trimming
+   sender MUST treat the receipt of a NACK as an indication of
+   congestion and reduce its sending rate, just as it would for a
+   segment loss detected by other means [RFC5681].
+
+8.1.  Magnitude of the Congestion Response
+
+   Because trimming reports loss on a per-segment basis, a sender learns
+   the exact number of segments lost in a flight rather than merely
+   inferring that at least one segment was lost.  This permits a
+   congestion response proportional to the measured loss.  A sender
+   SHOULD reduce its congestion window by one segment for each distinct
+   trimmed segment reported (that is, once per NACK), rather than
+   applying a single multiplicative decrease for the whole episode.  The
+   congestion window MUST NOT be reduced below the minimum permitted by
+   [RFC5681].
+
+   As described in Section 5.2, all NACKs that belong to the same flight
+   are handled within a single recovery episode.  The per-NACK
+   reductions accumulate over that episode, so the total reduction
+   tracks the severity of the congestion while the sender still enters
+   recovery only once.  This avoids both under-reacting, when a single
+   decrease would ignore the loss of many segments, and over-reacting,
+   when repeated multiplicative decreases would punish a single
+   congestion event many times over.
+
+8.2.  Preserving a Retransmission Opportunity
+
+   A NACK obligates the sender to retransmit the named segment.  If the
+   congestion response drives the congestion window below the current
+   number of packets in flight, the sender may be unable to transmit
+   that retransmission until a later ACK reopens the window; in the
+   worst case the segment is not repaired until an RTO, defeating the
+   purpose of trimming.  A sender MAY therefore ensure that a NACK-
+   triggered retransmission can be sent promptly even when the reduced
+   congestion window would otherwise be smaller than the number of
+   packets in flight.  The Proportional Rate Reduction approach
+   [RFC6937] satisfies this naturally, because it preserves at least one
+   segment of sending allowance on the first transmission of a recovery
+   episode.  Or, alternatively, a sender MAY allow a retransmission
+   signaled by a NACK to bypass the congestion window limit, provided
+   that the sender does not exceed the congestion window for any other
+   new data transmissions.
+
+8.3.  Authoritative Signal: No Undo
+
+   TCP implementations commonly undo a congestion-window reduction once
+   a loss is shown to have been spurious, for example when reordering
+   was mistaken for loss.  A NACK is generated only after a switch has
+   actually removed a payload, so the associated loss is never spurious.
+   A sender MUST NOT undo the congestion-window reduction caused by a
+   NACK.  Reductions caused by inference-based mechanisms that remain
+   enabled, such as DupAck or RACK-TLP, may still be undone under their
+   own rules; see Section 7.
+
+9.  IANA Considerations
+
+9.1.  TCP Options
+
+   This document defines two new TCP options that require assignment
+   from the "TCP Option Kind Numbers" registry [RFC9293].  IANA is
+   requested to assign two values:
+
+          +======+========+====================+===============+
+          | Kind | Length | Meaning            | Reference     |
+          +======+========+====================+===============+
+          | TBD1 | 2      | Trimming Permitted | This document |
+          +------+--------+--------------------+---------------+
+          | TBD2 | 6      | Trimming NACK      | This document |
+          +------+--------+--------------------+---------------+
+
+                                 Table 1
+
+   The option formats are specified in Section 3.1 and Section 3.2.
+   Prior to the assignment of permanent Kind values, experimental
+   deployments can carry these options using the shared experimental
+   option Kinds and an Experiment Identifier as described in [RFC6994].
+
+9.2.  Differentiated Services Codepoints
+
+   This document does not request any new assignments from the
+   Differentiated Services Field Codepoints registry.  The trimmable,
+   trimmed, and control service classes used in this document (see
+   Section 6) are realized with existing Differentiated Services
+   codepoints [RFC2474] selected by local or domain policy.  The names
+   DSCP_TRIMMABLE, DSCP_TRIMMED, and DSCP_CONTROL are placeholders for
+   those locally configured codepoints and do not denote new codepoint
+   assignments.
+
+10.  Security Considerations
+
+   The mechanisms in this document add a new control signal, the NACK,
+   and rely on Differentiated Services markings to convey trimming
+   events.  Packet trimming is primarily intended for deployment within
+   a single administrative domain, such as a data center, where the path
+   is largely trusted.  The analysis below also notes the residual risks
+   that apply when traffic crosses a less trusted path.
+
+10.1.  Forged NACK Injection
+
+   An attacker who can inject a TCP segment carrying a forged Trimming
+   NACK option for an existing connection can attempt to force the
+   sender to retransmit a segment, wasting bandwidth and provoking an
+   unwarranted reduction of the congestion window.  Several factors
+   bound this attack:
+
+   *  A NACK is acted upon only when it arrives on a segment that passes
+      the connection's normal demultiplexing checks.  An off-path
+      attacker must therefore guess the connection's four-tuple, as for
+      any spoofed TCP segment.
+
+   *  As required in Section 5.1, the sender MUST ignore a NACK whose
+      sequence number does not correspond to an outstanding
+      unacknowledged segment.  A forged NACK is effective only for an
+      in-window sequence number, which confines the attack to the same
+      blind in-window space analyzed in [RFC5961].
+
+   *  A retransmission provoked by a forged NACK carries only data the
+      receiver legitimately expects; it cannot cause the receiver to
+      accept incorrect data.  The impact is limited to wasted bandwidth
+      and an unnecessary congestion-window reduction.
+
+   To bound the congestion impact, the response to a NACK SHOULD be no
+   larger than the response to an equivalent loss inferred by other
+   means, so that a forged NACK is no more damaging than a forged
+   duplicate acknowledgment.  Implementations MAY additionally rate-
+   limit the retransmissions and congestion reactions driven by NACKs.
+
+10.2.  Risks of Bypassing the TCP Checksum
+
+   As described in Section 4.1, a receiver skips TCP checksum validation
+   for a trimmed packet, because the checksum was computed over the
+   original payload and is necessarily invalid once the payload has been
+   removed.  This weakens the end-to-end integrity check for the header
+   of a trimmed packet, so corruption of those header fields may pass
+   undetected.
+
+   The consequences are bounded by the restricted use the receiver makes
+   of a trimmed packet.  The receiver reads only the connection four-
+   tuple and the sequence number, and MUST NOT deliver any payload from
+   a trimmed packet to the application (see Section 4.2).  Undetected
+   corruption therefore cannot deliver wrong data to the application; at
+   worst it yields a NACK for the wrong connection or sequence number.
+   A NACK that matches no connection is discarded, and a NACK with a
+   wrong sequence number is bounded exactly as a forged NACK is: it is
+   ignored unless it falls within the outstanding window, and even then
+   it can only cause a spurious retransmission, which the receiver
+   disambiguates with a Duplicate SACK [RFC2883].
+
+10.3.  DSCP Remarking and Priority Abuse
+
+   This specification places control traffic, including NACKs, and
+   trimmed packets into higher-priority service classes than ordinary
+   trimmable data (see Section 6).  Where traffic can cross a trust
+   boundary, this raises two DSCP-related concerns:
+
+   *  Priority theft: an attacker that sets the control or trimmed-class
+      codepoint on its own traffic could obtain preferential queueing,
+      claiming an unfair share of capacity or degrading the latency of
+      legitimate control traffic.
+
+   *  Trimming evasion: an attacker that clears the trimmable codepoint
+      on its flows could render them ineligible for trimming, escaping
+      the congestion response that trimming imposes and competing
+      unfairly with conforming flows.
+
+   Both are instances of the general Differentiated Services trust model
+   [RFC2474] [RFC2475]: DSCP markings arriving from outside a trust
+   boundary cannot be relied upon.  A trimming-enabled domain MUST treat
+   its boundary as a trust boundary and police or re-mark the DSCP of
+   ingress traffic, so that the trimmable, trimmed, and control
+   codepoints carry their intended meaning only within the domain that
+   enforces them.
+
+11.  References
+
+11.1.  Normative References
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -564,12 +754,17 @@ Table of Contents
               Control", RFC 5681, DOI 10.17487/RFC5681, September 2009,
               <https://www.rfc-editor.org/info/rfc5681>.
 
-8.2.  Informative References
+11.2.  Informative References
 
    [RFC2018]  Mathis, M., Mahdavi, J., Floyd, S., and A. Romanow, "TCP
               Selective Acknowledgment Options", RFC 2018,
               DOI 10.17487/RFC2018, October 1996,
               <https://www.rfc-editor.org/info/rfc2018>.
+
+   [RFC2475]  Blake, S., Black, D., Carlson, M., Davies, E., Wang, Z.,
+              and W. Weiss, "An Architecture for Differentiated
+              Services", RFC 2475, DOI 10.17487/RFC2475, December 1998,
+              <https://www.rfc-editor.org/info/rfc2475>.
 
    [RFC2883]  Floyd, S., Mahdavi, J., Mathis, M., and M. Podolsky, "An
               Extension to the Selective Acknowledgement (SACK) Option
@@ -580,6 +775,11 @@ Table of Contents
               of Explicit Congestion Notification (ECN) to IP",
               RFC 3168, DOI 10.17487/RFC3168, September 2001,
               <https://www.rfc-editor.org/info/rfc3168>.
+
+   [RFC5961]  Ramaiah, A., Stewart, R., and M. Dalal, "Improving TCP's
+              Robustness to Blind In-Window Attacks", RFC 5961,
+              DOI 10.17487/RFC5961, August 2010,
+              <https://www.rfc-editor.org/info/rfc5961>.
 
    [RFC6298]  Paxson, V., Allman, M., Chu, J., and M. Sargent,
               "Computing TCP's Retransmission Timer", RFC 6298,
@@ -596,6 +796,14 @@ Table of Contents
               Based on Selective Acknowledgment (SACK) for TCP",
               RFC 6675, DOI 10.17487/RFC6675, August 2012,
               <https://www.rfc-editor.org/info/rfc6675>.
+
+   [RFC6937]  Mathis, M., Dukkipati, N., and Y. Cheng, "Proportional
+              Rate Reduction for TCP", RFC 6937, DOI 10.17487/RFC6937,
+              May 2013, <https://www.rfc-editor.org/info/rfc6937>.
+
+   [RFC6994]  Touch, J., "Shared Use of Experimental TCP Options",
+              RFC 6994, DOI 10.17487/RFC6994, August 2013,
+              <https://www.rfc-editor.org/info/rfc6994>.
 
    [RFC8985]  Cheng, Y., Cardwell, N., Dukkipati, N., and P. Jha, "The
               RACK-TLP Loss Detection Algorithm for TCP", RFC 8985,

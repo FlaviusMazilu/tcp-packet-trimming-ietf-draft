@@ -46,11 +46,15 @@ normative:
 
 informative:
   RFC2018:
+  RFC2475:
   RFC2883:
   RFC3168:
+  RFC5961:
   RFC6298:
   RFC6582:
   RFC6675:
+  RFC6937:
+  RFC6994:
   RFC8985:
   UEC-SPEC:
     target: https://ultraethernet.org/
@@ -94,7 +98,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 All additional state and signaling required between the two communicating hosts are carried as TCP options.
 
 
-## Capability Negotiation (Trimming Permitted)
+## Capability Negotiation (Trimming Permitted) {#capability-negotiation-trimming-permitted}
 
 If both endpoints support packet trimming, they SHOULD set the DSCP_TRIMMABLE codepoint on all data packets. However, to prevent a scenario where a sender marks packets as trimmable but the receiver does not understand how to process trimmed packets or issue NACKs, capability negotiation is required.
 
@@ -110,7 +114,7 @@ TCP Trimming Permitted Option Format:
 {: #fig-trimming-permitted-option}
 
 
-## Trimming NACK Option
+## Trimming NACK Option {#trimming-nack-option}
 
 When congestion occurs at a network switch along the path, the switch trims the payload of trimmable packets, updates the IP header to DSCP_TRIMMED, and forwards the header to the data receiver.
 
@@ -162,7 +166,7 @@ _____  ____________________________________________________________
 
 # Data Receiver Behavior upon Receiving a Trimmed Packet
 
-## Bypassing TCP Checksum Validation
+## Bypassing TCP Checksum Validation {#bypassing-tcp-checksum-validation}
 
 When a network switch experiences congestion, it trims the payload of a packet rather than dropping it entirely. In this scenario, the switch updates the relevant IP header fields: Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header {{RFC9293}}. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.
 
@@ -174,7 +178,7 @@ While bypassing checksum validation carries inherent risks, a trimmed packet is 
 * Corrupted Sequence Number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence. As above, this results either in an ignored NACK or a spurious retransmission.
 
 
-## Ignoring Remaining Payload
+## Ignoring Remaining Payload {#ignoring-remaining-payload}
 
 Network switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP header to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment.
 
@@ -190,7 +194,7 @@ The NACK option payload is 4 bytes in length and MUST contain the sequence numbe
 
 # Data Sender Behavior upon Receiving a NACK
 
-## Identifying and Retransmitting the Lost Segment
+## Identifying and Retransmitting the Lost Segment {#identifying-and-retransmitting-the-lost-segment}
 
 Upon receiving a TCP packet containing a NACK option, the data sender should extract the sequence number from the NACK option payload and locate the corresponding unacknowledged data segment in its retransmission queue.
 
@@ -206,7 +210,7 @@ If the sender successfully identifies and marks a segment as lost based on a NAC
 A trimmed packet is an explicit signal of network congestion and packet loss. The data sender should anticipate that other packets within the same flight may have also been trimmed or dropped, which will be subsequently detected via additional NACKs, Duplicate ACKs, or RACK-TLP {{RFC8985}} timer expirations. By entering Fast Recovery, the data sender ensures that the congestion window is appropriately updated just once for the entire loss episode, conforming to the principle that losses, regardless of the detection mechanism, constitute a unified indication of congestion.
 
 
-# DSCP Marking Strategy
+# DSCP Marking Strategy {#dscp-marking-strategy}
 
 This specification introduces the use of specific DSCP values to manage trimming behavior:
 
@@ -224,7 +228,7 @@ A critical consideration is the DSCP value applied to the return NACK packets. T
 * Alternative 3 (DSCP_TRIMMABLE): NACKs are sent with standard data priority. This reduces the number of required DSCP values but sacrifices the latency advantage needed for rapid fast-recovery.
 
 
-# Interaction with Existing Loss Detection Mechanisms
+# Interaction with Existing Loss Detection Mechanisms {#interaction-with-existing-loss-detection-mechanisms}
 
 In a fully trimming-enabled network topology where every switch is capable of packet trimming, heuristic mechanisms like DupAck and RACK-TLP MAY be disabled. Packet Trimming naturally handles high degrees of packet reordering without generating the false positive retransmissions common to DupAck heuristics.
 
@@ -379,6 +383,72 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
                                         (All segments accounted for)
 ~~~~
 {: #fig-sack-scoreboard-updates}
+
+
+# Congestion Control Considerations
+
+A trimmed packet is an explicit and authoritative indication of network congestion: a switch removed the payload precisely because a queue exceeded its threshold. Each NACK therefore conveys both a loss to be repaired and a congestion signal to be obeyed. A trimming sender MUST treat the receipt of a NACK as an indication of congestion and reduce its sending rate, just as it would for a segment loss detected by other means {{RFC5681}}.
+
+## Magnitude of the Congestion Response
+
+Because trimming reports loss on a per-segment basis, a sender learns the exact number of segments lost in a flight rather than merely inferring that at least one segment was lost. This permits a congestion response proportional to the measured loss. A sender SHOULD reduce its congestion window by one segment for each distinct trimmed segment reported (that is, once per NACK), rather than applying a single multiplicative decrease for the whole episode. The congestion window MUST NOT be reduced below the minimum permitted by {{RFC5681}}.
+
+As described in [](#entering-fast-recovery), all NACKs that belong to the same flight are handled within a single recovery episode. The per-NACK reductions accumulate over that episode, so the total reduction tracks the severity of the congestion while the sender still enters recovery only once. This avoids both under-reacting, when a single decrease would ignore the loss of many segments, and over-reacting, when repeated multiplicative decreases would punish a single congestion event many times over.
+
+## Preserving a Retransmission Opportunity
+
+A NACK obligates the sender to retransmit the named segment. If the congestion response drives the congestion window below the current number of packets in flight, the sender may be unable to transmit that retransmission until a later ACK reopens the window; in the worst case the segment is not repaired until an RTO, defeating the purpose of trimming. A sender MAY therefore ensure that a NACK-triggered retransmission can be sent promptly even when the reduced congestion window would otherwise be smaller than the number of packets in flight. The Proportional Rate Reduction approach {{RFC6937}} satisfies this naturally, because it preserves at least one segment of sending allowance on the first transmission of a recovery episode. Or, alternatively, a sender MAY allow a retransmission signaled by a NACK to bypass the congestion window limit, provided that the sender does not exceed the congestion window for any other new data transmissions.
+
+## Authoritative Signal: No Undo
+
+TCP implementations commonly undo a congestion-window reduction once a loss is shown to have been spurious, for example when reordering was mistaken for loss. A NACK is generated only after a switch has actually removed a payload, so the associated loss is never spurious. A sender MUST NOT undo the congestion-window reduction caused by a NACK. Reductions caused by inference-based mechanisms that remain enabled, such as DupAck or RACK-TLP, may still be undone under their own rules; see [](#interaction-with-existing-loss-detection-mechanisms).
+
+# IANA Considerations
+
+## TCP Options
+
+This document defines two new TCP options that require assignment from the "TCP Option Kind Numbers" registry {{RFC9293}}. IANA is requested to assign two values:
+
+| Kind | Length | Meaning            | Reference     |
+|------|--------|--------------------|---------------|
+| TBD1 | 2      | Trimming Permitted | This document |
+| TBD2 | 6      | Trimming NACK      | This document |
+
+The option formats are specified in [](#capability-negotiation-trimming-permitted) and [](#trimming-nack-option). Prior to the assignment of permanent Kind values, experimental deployments can carry these options using the shared experimental option Kinds and an Experiment Identifier as described in {{RFC6994}}.
+
+## Differentiated Services Codepoints
+
+This document does not request any new assignments from the Differentiated Services Field Codepoints registry. The trimmable, trimmed, and control service classes used in this document (see [](#dscp-marking-strategy)) are realized with existing Differentiated Services codepoints {{RFC2474}} selected by local or domain policy. The names DSCP_TRIMMABLE, DSCP_TRIMMED, and DSCP_CONTROL are placeholders for those locally configured codepoints and do not denote new codepoint assignments.
+
+
+# Security Considerations
+
+The mechanisms in this document add a new control signal, the NACK, and rely on Differentiated Services markings to convey trimming events. Packet trimming is primarily intended for deployment within a single administrative domain, such as a data center, where the path is largely trusted. The analysis below also notes the residual risks that apply when traffic crosses a less trusted path.
+
+## Forged NACK Injection
+
+An attacker who can inject a TCP segment carrying a forged Trimming NACK option for an existing connection can attempt to force the sender to retransmit a segment, wasting bandwidth and provoking an unwarranted reduction of the congestion window. Several factors bound this attack:
+
+* A NACK is acted upon only when it arrives on a segment that passes the connection's normal demultiplexing checks. An off-path attacker must therefore guess the connection's four-tuple, as for any spoofed TCP segment.
+* As required in [](#identifying-and-retransmitting-the-lost-segment), the sender MUST ignore a NACK whose sequence number does not correspond to an outstanding unacknowledged segment. A forged NACK is effective only for an in-window sequence number, which confines the attack to the same blind in-window space analyzed in {{RFC5961}}.
+* A retransmission provoked by a forged NACK carries only data the receiver legitimately expects; it cannot cause the receiver to accept incorrect data. The impact is limited to wasted bandwidth and an unnecessary congestion-window reduction.
+
+To bound the congestion impact, the response to a NACK SHOULD be no larger than the response to an equivalent loss inferred by other means, so that a forged NACK is no more damaging than a forged duplicate acknowledgment. Implementations MAY additionally rate-limit the retransmissions and congestion reactions driven by NACKs.
+
+## Risks of Bypassing the TCP Checksum
+
+As described in [](#bypassing-tcp-checksum-validation), a receiver skips TCP checksum validation for a trimmed packet, because the checksum was computed over the original payload and is necessarily invalid once the payload has been removed. This weakens the end-to-end integrity check for the header of a trimmed packet, so corruption of those header fields may pass undetected.
+
+The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see [](#ignoring-remaining-payload)). Undetected corruption therefore cannot deliver wrong data to the application; at worst it yields a NACK for the wrong connection or sequence number. A NACK that matches no connection is discarded, and a NACK with a wrong sequence number is bounded exactly as a forged NACK is: it is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK {{RFC2883}}.
+
+## DSCP Remarking and Priority Abuse
+
+This specification places control traffic, including NACKs, and trimmed packets into higher-priority service classes than ordinary trimmable data (see [](#dscp-marking-strategy)). Where traffic can cross a trust boundary, this raises two DSCP-related concerns:
+
+* Priority theft: an attacker that sets the control or trimmed-class codepoint on its own traffic could obtain preferential queueing, claiming an unfair share of capacity or degrading the latency of legitimate control traffic.
+* Trimming evasion: an attacker that clears the trimmable codepoint on its flows could render them ineligible for trimming, escaping the congestion response that trimming imposes and competing unfairly with conforming flows.
+
+Both are instances of the general Differentiated Services trust model {{RFC2474}} {{RFC2475}}: DSCP markings arriving from outside a trust boundary cannot be relied upon. A trimming-enabled domain MUST treat its boundary as a trust boundary and police or re-mark the DSCP of ingress traffic, so that the trimmable, trimmed, and control codepoints carry their intended meaning only within the domain that enforces them.
 
 
 --- back

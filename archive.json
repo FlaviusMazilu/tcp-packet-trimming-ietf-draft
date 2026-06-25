@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-06-23T02:11:51.357635+00:00",
+  "timestamp": "2026-06-25T02:13:39.595373+00:00",
   "repo": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
   "labels": [
     {
@@ -63,13 +63,13 @@
       "labels": [],
       "body": "",
       "createdAt": "2026-06-10T20:23:44Z",
-      "updatedAt": "2026-06-21T21:46:15Z",
+      "updatedAt": "2026-06-23T17:32:53Z",
       "baseRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
       "baseRefName": "main",
       "baseRefOid": "dec361a16c6c2e8321f61fd0ad125ced0752ea95",
       "headRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
       "headRefName": "user/fmazilu/draft",
-      "headRefOid": "46d014eab6741a149ed3191ee5e7ad6edd258801",
+      "headRefOid": "36b009b77b98cfa3616f509afd53451c54afa637",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,
@@ -439,6 +439,86 @@
               "body": "well, i had to update the high_seq  for every incoming NACK because there were a lot of warnings telling me that there are LOST or RETRANSMITTED packets in TCP_OPEN state (the state of no congestion). Maybe this should be analyzed further, why this happens, but i think, because cwnd is still high, it is possible that the sender also sent data packets with seq_num > high_seq, resulting in a (reordered) NACK(seq_num) that arrives immediately before the finish of recovery, i.e. when an ACK(high_seq) arrives. is it a bad thing to stay in recovery that long? I guess for usual RENO CC it is, because at the end of it, cwnd = (the old) cwnd/2, but in our custom CC, it is not re-updated\r\n\r\nDCTCP computes alpha continuously, regardless of the congestion state. It just remembers the snd_next sequence number (at init and on every \"end of window\"), and when it sees an ACK for that saved snd_sext, it concludes that a window has ended, computes and stores alpha, resets local snd_next and other vars. Then, when the TCP core sees loss, it asks the active CC module for a new ssthresh value, which, using PRR will be the next cwnd value over time (here, on this request, DCTCP uses alpha to compute the future cwnd value; but the actual state machine is not touched at all, core TCP does it).\r\n\r\nI re-read this part again, and this also does not sit right with me:\r\n\"By entering Fast Recovery, the data sender ensures that the congestion window is appropriately updated just once for the entire loss episode\"\r\nWell, if we are going to have our custom CC, a sender MUST reduce cwnd multiple times for the entire loss episode (multiple cwnd-- per NACK). Maybe we should introduce a different CA state for NACKs? I feel this would simply all this friction we got from dealing with Recovery and cwnd \\= 2 (and would make CC design much simpler too, for example, the CC i did could never differentiate from a dupACK loss and NACK loss). I understand it is nicer to place all the LOSS under the same umbrella of Recovery, but a NACK loss is so much different and more powerful than a dupACK loss. ",
               "createdAt": "2026-06-21T21:46:15Z",
               "updatedAt": "2026-06-21T21:46:15Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABD2R3EQ",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-23T12:29:13Z",
+          "updatedAt": "2026-06-23T12:29:13Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "\"Well, if we are going to have our custom CC, a sender MUST reduce cwnd multiple times for the entire loss episode (multiple cwnd-- per NACK)\"\n\nI'll have to look over the code, since I'm not 100% my remembrance is right, but here's my view of the issue you described in the quote above:\n- you don't need to have multiple cwnd reductions per loss episode(loss episode described as the sender entering Fast Recovery and exiting on high_ack)\n- doing multiple \"cwnd--\" in one loss episode, it's equivalent to having a **single** cwnd reduction of (cwnd - 4)",
+              "createdAt": "2026-06-23T12:29:13Z",
+              "updatedAt": "2026-06-23T12:29:13Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABD2TtcQ",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-23T12:32:24Z",
+          "updatedAt": "2026-06-23T12:32:24Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "\"the CC i did could never differentiate from a dupACK loss and NACK loss)\"\n\nCan't the flags passed to the 'methods' invoked on the CC be used for that?",
+              "createdAt": "2026-06-23T12:32:24Z",
+              "updatedAt": "2026-06-23T12:32:24Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABD219-g",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "FlaviusMazilu",
+          "authorAssociation": "OWNER",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-23T13:38:11Z",
+          "updatedAt": "2026-06-23T13:38:11Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "\"Maybe this should be analyzed further, why this happens, but i think, because cwnd is still high, it is possible that the sender also sent data packets with seq_num > high_seq, resulting in a (reordered) NACK(seq_num) that arrives immediately before the finish of recovery\"\n\nFirst part of the statement - definitely a valid thing that could happen. In Fast Recovery new, never transmitted packets can be sent as well\n\nSecond part - \"that arrives immediately before the finish of recovery\" - there's definitely not some sort of racing condition that could happen if thats what you mean. A socket should never be in a state where two packets are processing at the same time(different connections of course there's no issue there)\n\nNote that you can very well be in the Open state when you receive a NACK, and after retransmitting it and performing all the operations required, then Recovery state is entered(i'm not 100% sure of the timeline, which step executes first), but this can answer the 'anomalies'",
+              "createdAt": "2026-06-23T13:38:11Z",
+              "updatedAt": "2026-06-23T13:38:11Z"
+            }
+          ]
+        },
+        {
+          "id": "PRR_kwDOS20dac8AAAABD4MLgQ",
+          "commit": {
+            "abbreviatedOid": "46d014e"
+          },
+          "author": "vali0901",
+          "authorAssociation": "COLLABORATOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2026-06-23T16:29:30Z",
+          "updatedAt": "2026-06-23T16:29:31Z",
+          "comments": [
+            {
+              "originalPosition": 207,
+              "body": "\r\n\"doing multiple \"cwnd--\" in one loss episode, it's equivalent to having a single cwnd reduction of (cwnd - 4)\"\r\nOkay, but i am still doing cwnd-- 4 times, not a single reduction of cwnd -= 4. I dont know if there is a semantic misunderstanding. The Sender enters Fast Recovery, then, for every incoming NACK (an unknown number), the sender will decrease cwnd at the time it received the respective NACK. I believe this means multiple reductions of cwnd, in a loss episode. \r\n\r\n\"Second part - \"that arrives immediately before the finish of recovery\" - there's definitely not some sort of racing condition that could happen if thats what you mean\"\r\n\r\nnot a race condition. So the NACK(seq_num) for the higher seq_num arrives, retrans_out is increased. Then, an ACK(high_ack) comes in, tcp exits FAST RECOVERY, it is now in TCP_OPEN, BUTT retrans_out and lost out are still high (the previous retransmission i was talking about). Not sure of the internal mechanics, but this is the scenario i was thinking of\r\n\r\n\"Can't the flags passed to the 'methods' invoked on the CC be used for that?\"\r\nThey are not used for that in TCP. So no.\r\nAfter some discussions with claude, adding a new CA state is a no-no. The simplest way to achieve the cwnd-- AND to use other loss detectors is to not change the CA state at all, i.e. DO NOT ENTER RECOVERY, just decrease cwnd and move on (and adapt packets_in_flight estimators). This way, we can still use the existent congestion controls that have been built for heuristic based loss detectors, while also enforcing the only cwnd reduction that makes sense for a NACK (cwnd--). \r\n\r\nAre there any inconveniences if the sender does not entry RECOVERY upon receiving a NACK? ",
+              "createdAt": "2026-06-23T16:29:30Z",
+              "updatedAt": "2026-06-23T16:29:31Z"
             }
           ]
         }

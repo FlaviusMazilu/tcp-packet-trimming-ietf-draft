@@ -53,7 +53,6 @@ informative:
   RFC6298:
   RFC6582:
   RFC6675:
-  RFC6937:
   RFC6994:
   RFC8985:
   UEC-SPEC:
@@ -387,21 +386,13 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 
 # Congestion Control Considerations
 
-A trimmed packet is an explicit and authoritative indication of network congestion: a switch removed the payload precisely because a queue exceeded its threshold. Each NACK therefore conveys both a loss to be repaired and a congestion signal to be obeyed. A trimming sender MUST treat the receipt of a NACK as an indication of congestion and reduce its sending rate, just as it would for a segment loss detected by other means {{RFC5681}}.
+A trimmed packet is an explicit and authoritative indication of network congestion: a switch removed the payload precisely because a queue exceeded its threshold. A NACK therefore conveys both a loss to be repaired and a congestion signal. A trimming sender MUST treat the receipt of a NACK as an indication of congestion and reduce its sending rate, as it would for a segment loss detected by other means {{RFC5681}}.
 
-## Magnitude of the Congestion Response
+The precise magnitude of this reduction is left as future work. Because trimming reports loss on a per-segment basis, a sender learns the exact number of segments lost in a flight rather than merely inferring that at least one was lost, which may permit a more accurate response than a single multiplicative decrease per loss episode. Defining and evaluating such a response is an open item; this document requires only that the reaction to a NACK be no more aggressive than the standard response to an equivalent inferred loss {{RFC5681}}.
 
-Because trimming reports loss on a per-segment basis, a sender learns the exact number of segments lost in a flight rather than merely inferring that at least one segment was lost. This permits a congestion response proportional to the measured loss. A sender SHOULD reduce its congestion window by one segment for each distinct trimmed segment reported (that is, once per NACK), rather than applying a single multiplicative decrease for the whole episode. The congestion window MUST NOT be reduced below the minimum permitted by {{RFC5681}}.
+A retransmission triggered by a NACK is ordinary TCP data: it MUST remain subject to the congestion window and to the count of packets in flight, and MUST NOT bypass these limits. If the congestion window does not currently allow the retransmission, the retransmission is sent once the window permits.
 
-As described in [](#entering-fast-recovery), all NACKs that belong to the same flight are handled within a single recovery episode. The per-NACK reductions accumulate over that episode, so the total reduction tracks the severity of the congestion while the sender still enters recovery only once. This avoids both under-reacting, when a single decrease would ignore the loss of many segments, and over-reacting, when repeated multiplicative decreases would punish a single congestion event many times over.
-
-## Preserving a Retransmission Opportunity
-
-A NACK obligates the sender to retransmit the named segment. If the congestion response drives the congestion window below the current number of packets in flight, the sender may be unable to transmit that retransmission until a later ACK reopens the window; in the worst case the segment is not repaired until an RTO, defeating the purpose of trimming. A sender MAY therefore ensure that a NACK-triggered retransmission can be sent promptly even when the reduced congestion window would otherwise be smaller than the number of packets in flight. The Proportional Rate Reduction approach {{RFC6937}} satisfies this naturally, because it preserves at least one segment of sending allowance on the first transmission of a recovery episode. Or, alternatively, a sender MAY allow a retransmission signaled by a NACK to bypass the congestion window limit, provided that the sender does not exceed the congestion window for any other new data transmissions.
-
-## Authoritative Signal: No Undo
-
-TCP implementations commonly undo a congestion-window reduction once a loss is shown to have been spurious, for example when reordering was mistaken for loss. A NACK is generated only after a switch has actually removed a payload, so the associated loss is never spurious. A sender MUST NOT undo the congestion-window reduction caused by a NACK. Reductions caused by inference-based mechanisms that remain enabled, such as DupAck or RACK-TLP, may still be undone under their own rules; see [](#interaction-with-existing-loss-detection-mechanisms).
+Because a NACK is generated only after a switch has actually removed a payload, the corresponding loss is never spurious; a sender SHOULD NOT undo a congestion-window reduction caused by a NACK. Reductions caused by inference-based mechanisms that remain enabled follow their own rules; see [](#interaction-with-existing-loss-detection-mechanisms).
 
 # IANA Considerations
 

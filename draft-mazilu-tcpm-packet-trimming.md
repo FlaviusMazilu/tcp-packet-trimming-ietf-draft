@@ -34,7 +34,7 @@ author:
     fullname: Costin Raiciu
     initials: C.
     surname: Raiciu
-    organization: UPB
+    organization: UPB/Broadcom
     email: costin.raiciu@upb.ro
 
 normative:
@@ -165,25 +165,25 @@ _____  ____________________________________________________________
 {: #fig-basic-trimming-packet-flow}
 
 
+## Effects of Trimming on TCP Checksum and Payload {#effects-of-trimming-on-tcp-checksum-and-payload}
+
+When a switch trims a packet, it updates the relevant IP header fields, including Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header {{RFC9293}}. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.
+
+Switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP headers to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment. Since the TCP checksum is invalid, the integrity of this data cannot be verified.
+
+
 # Data Receiver Behavior upon Receiving a Trimmed Packet
 
 ## Bypassing TCP Checksum Validation {#bypassing-tcp-checksum-validation}
 
-When a network switch experiences congestion, it trims the payload of a packet rather than dropping it entirely. In this scenario, the switch updates the relevant IP header fields: Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header {{RFC9293}}. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.
+When a TCP data receiver identifies a trimmed packet by observing the DSCP_TRIMMED codepoint in the IP header, it MUST skip the standard TCP checksum verification for that packet, because trimming removes payload bytes that were covered by the original checksum. The receiver MUST process the packet only according to the trimmed-packet rules in this section; it MUST NOT treat the packet as ordinary TCP data.
 
-For this reason, when a TCP data receiver identifies a trimmed packet, specifically, by observing the DSCP_TRIMMED codepoint in the IP header, it MUST skip the standard TCP checksum verification.
-
-While bypassing checksum validation carries inherent risks, a trimmed packet is processed exclusively for the information contained within its TCP header: identifying the connection tuple and the sequence number. The receiver MUST NOT process or deliver any payload data from this packet to the application layer. The potential failure modes of an undetected header corruption in this case are minimal:
-
-* Corrupted Port Numbers: If the source or destination port is corrupted, the receiver may fail to find a matching connection socket. The packet is silently discarded. If a false match occurs, the data receiver will issue a NACK for an unexpected sequence number, which the data sender will ignore, provided the sequence number does not match any unacknowledged packet. If the sender does falsely retransmit, the spurious retransmission will be mitigated by the receiver issuing a Duplicate Selective Acknowledgment (DSACK) {{RFC2883}}, allowing the sender to revert any unwarranted congestion window reductions.
-* Corrupted Sequence Number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence. As above, this results either in an ignored NACK or a spurious retransmission.
+The checksum effects of trimming are described in [](#effects-of-trimming-on-tcp-checksum-and-payload). Security considerations for bypassing checksum validation are discussed in [](#risks-of-bypassing-the-tcp-checksum).
 
 
 ## Ignoring Remaining Payload {#ignoring-remaining-payload}
 
-Network switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP header to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment.
-
-Because the TCP checksum is invalid and the integrity of this data cannot be verified, the data receiver MUST NOT process or acknowledge any data payload remaining in the trimmed packet.
+A trimmed packet may still contain payload bytes after the TCP header. The data receiver MUST NOT process, acknowledge, or deliver any payload data remaining in the trimmed packet.
 
 
 ## Generating the NACK Packet
@@ -430,9 +430,12 @@ To bound the congestion impact, the response to a NACK SHOULD be no larger than 
 
 ## Risks of Bypassing the TCP Checksum
 
-As described in [](#bypassing-tcp-checksum-validation), a receiver skips TCP checksum validation for a trimmed packet, because the checksum was computed over the original payload and is necessarily invalid once the payload has been removed. This weakens the end-to-end integrity check for the header of a trimmed packet, so corruption of those header fields may pass undetected.
+As described in [](#bypassing-tcp-checksum-validation), a receiver skips TCP checksum validation for a trimmed packet. This weakens the end-to-end integrity check for the header of that packet, so corruption of those header fields may pass undetected. The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see [](#ignoring-remaining-payload)).
 
-The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see [](#ignoring-remaining-payload)). Undetected corruption therefore cannot deliver wrong data to the application; at worst it yields a NACK for the wrong connection or sequence number. A NACK that matches no connection is discarded, and a NACK with a wrong sequence number is bounded exactly as a forged NACK is: it is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK {{RFC2883}}.
+Undetected corruption can have the following effects:
+
+* Corrupted port numbers: If the source or destination port is corrupted, the receiver may fail to find a matching connection socket and discard the packet. If a false match occurs, the receiver will issue a NACK for an unexpected sequence number, which the sender will ignore unless that sequence number matches an unacknowledged packet.
+* Corrupted sequence number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence number. As with a forged NACK, this is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK {{RFC2883}}.
 
 ## DSCP Remarking and Priority Abuse
 

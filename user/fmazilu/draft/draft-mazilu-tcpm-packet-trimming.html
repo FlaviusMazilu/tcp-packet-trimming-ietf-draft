@@ -1195,9 +1195,6 @@ svg {
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-interaction-with-rack-tlp" class="internal xref">Interaction with RACK-TLP</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-interaction-with-dupack-new" class="internal xref">Interaction with DupAck (NewReno / SACK)</a></p>
-</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
@@ -1542,88 +1539,6 @@ Event  TCP DATA SENDER                           TCP DATA RECEIVER
 <figcaption><a href="#figure-5" class="selfRef">Figure 5</a></figcaption></figure>
 </div>
 <p id="section-7.1-8">(Implementation Note: To prevent redundant retransmissions in edge cases where a NACK arrives late but RACK has already retransmitted the segment, implementations MAY enforce a rule where NACK-driven retransmissions are ignored if the segment was already retransmitted within the last min_RTT.)<a href="#section-7.1-8" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="interaction-with-dupack-newreno-sack">
-<section id="section-7.2">
-        <h3 id="name-interaction-with-dupack-new">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-interaction-with-dupack-new" class="section-name selfRef">Interaction with DupAck (NewReno / SACK)</a>
-        </h3>
-<p id="section-7.2-1">Regardless of whether the connection utilizes NewReno <span>[<a href="#RFC6582" class="cite xref">RFC6582</a>]</span> or SACK-based recovery <span>[<a href="#RFC6675" class="cite xref">RFC6675</a>]</span>, both standards mandate that a packet is retransmitted only once per Fast Recovery phase. Therefore, there is no risk of a DupAck retransmitting the exact same packet after a NACK redundantly.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<p id="section-7.2-2">In both approaches based on DupAck, multiple different packets can be retransmitted in the same Fast Recovery phase. This is useful for us because both DupAck and NACKs have the chance to retransmit different packets.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<p id="section-7.2-3">Scenario C: NACK and Partial ACKs (NewReno Style)<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4">If P2 is trimmed and P3 is dropped, the NACK triggers the recovery of P2. The DupAcks associated with the trimmed packet are effectively absorbed because P2 is already being handled. When the Partial ACK confirming P2 arrives, NewReno <span>[<a href="#RFC6582" class="cite xref">RFC6582</a>]</span> uses it to infer the loss of P3 and triggers the subsequent retransmission.<a href="#section-7.2-4" class="pilcrow">¶</a></p>
-<div id="fig-nack-and-partial-acks">
-<figure id="figure-6">
-          <div class="alignLeft art-ascii-art art-text artwork" id="section-7.2-5.1">
-<pre>
-Event  TCP DATA SENDER                            TCP DATA RECEIVER
- _____  ___________________________________________________________
-
-  1.   Send P1, P2, P3, P4          --&gt;
-       [P2 trimmed]
-       [P3 dropped by network]
-                                    &lt;--     Receive P1, ACK 1
-                                    &lt;--     Receive P2(Trimmed),
-                                                ACK 1, NACK 2
-                                    &lt;--     Receive P4, ACK 1
-
-  2.   Receive ACK 1
-       Receive ACK 1, NACK 2
-       NACK: Retransmit P2          --&gt;
-       Receive ACK 1
-       (DupAck heuristic ignores P2
-        as it is already recovering)
-                                    &lt;--     Receive P2, ACK 2
-                                              [PARTIAL ACK:
-                                               P3 still missing]
-
-  3.   Receive ACK 2
-       (Partial ACK triggers NewReno)
-       Retransmit P3                --&gt;
-                                    &lt;--     Receive P3, ACK 4
-</pre>
-</div>
-<figcaption><a href="#figure-6" class="selfRef">Figure 6</a></figcaption></figure>
-</div>
-<p id="section-7.2-6">Scenario D: SACK Scoreboard Updates<a href="#section-7.2-6" class="pilcrow">¶</a></p>
-<p id="section-7.2-7">NACKs actively aid in updating the SACK scoreboard faster. In a complex loss event, the NACK allows for the immediate retransmission of the trimmed packet, while standard SACK processing <span>[<a href="#RFC6675" class="cite xref">RFC6675</a>]</span> seamlessly handles the standard drops.<a href="#section-7.2-7" class="pilcrow">¶</a></p>
-<div id="fig-sack-scoreboard-updates">
-<figure id="figure-7">
-          <div class="alignLeft art-ascii-art art-text artwork" id="section-7.2-8.1">
-<pre>
-Event  TCP DATA SENDER                            TCP DATA RECEIVER
- _____  ___________________________________________________________
-  1.   Send P0, P1, P2, P3, P4      --&gt;
-       [P1 trimmed, P3 dropped]
-
-  2.                                &lt;--    Receive P0, ACK 0
-                                    &lt;--    Receive P1 (Trimmed),
-                                                 ACK 0, NACK 1
-
-                                    &lt;--    Receive P2, ACK 0, SACK 2
-                                    &lt;--  Receive P4, ACK 0, SACK 2, 4
-
-  3.   Receive ACK 0
-       Receive ACK 0, NACK 1
-       Fast Retransmit P1           --&gt;
-
-  4.   Receive ACK 0, SACK 2
-       [SACK ignores P1; already sent]
-
-  5.   Receive ACK 0, SACK 2, 4
-       (Scoreboard indicates P3 loss)
-       Retransmit P3                --&gt;
-
-  6.                                &lt;--    Receive P1, ACK 2, SACK 4
-                                              (P0-P2 now contiguous)
-
-  7.                                &lt;--    Receive P3, ACK 4
-                                        (All segments accounted for)
-</pre>
-</div>
-<figcaption><a href="#figure-7" class="selfRef">Figure 7</a></figcaption></figure>
-</div>
 </section>
 </div>
 </section>

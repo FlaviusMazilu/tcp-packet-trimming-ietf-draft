@@ -9,7 +9,7 @@
 <meta content="Valentin Ionut Bobaru" name="author">
 <meta content="Costin Raiciu" name="author">
 <meta content="
-       This document specifies a TCP extension for packet trimming. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery. 
+       This document specifies a TCP extension that enables TCP endpoints to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="draft-mazilu-tcpm-packet-trimming-latest" name="ietf.draft">
@@ -1049,7 +1049,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Mazilu, et al.</td>
-<td class="center">Expires 5 January 2027</td>
+<td class="center">Expires 6 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1062,12 +1062,12 @@ svg {
 <dd class="internet-draft">draft-mazilu-tcpm-packet-trimming-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-04" class="published">4 July 2026</time>
+<time datetime="2026-07-05" class="published">5 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-05">5 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-06">6 January 2027</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1088,7 +1088,7 @@ svg {
 <h1 id="title">TCP Packet Trimming Extension</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This document specifies a TCP extension for packet trimming. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This document specifies a TCP extension that enables TCP endpoints to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1109,7 +1109,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1254,6 +1254,7 @@ svg {
 <p id="section-1-4">However, because these approaches are fundamentally heuristics, they can fail to detect lost packets in time (forcing an RTO) or trigger false retransmissions, particularly in networks with significant packet reordering.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Packet Trimming offers a deterministic alternative. Originally introduced in the Ultra Ethernet Consortium's specifications <span>[<a href="#UEC-SPEC" class="cite xref">UEC-SPEC</a>]</span>, this approach is gaining support in modern network switch hardware. When switch buffers get full or exceed a certain threshold (as in Active Queue Management), rather than silently dropping the packet, the switch trims the payload. It retains only the bytes up to the transport header and forwards this "trimmed" packet to the destination.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">By using Differentiated Services Code Point (DSCP) markings <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span>, the network can inform the destination of the trimming event. The destination then issues a Negative Acknowledgment (NACK) carrying the specific sequence number of the affected packet, eliminating the need for the data sender to rely on heuristics to determine what to retransmit.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">This document defines the TCP signaling and endpoint behavior needed to use this information. It does not specify how a network is configured for packet trimming, which packets a switch chooses to trim, or how DSCP values are provisioned inside an administrative domain. That network-side configuration is outside the scope of this document; deployments can refer to the Ultra Ethernet Consortium specifications <span>[<a href="#UEC-SPEC" class="cite xref">UEC-SPEC</a>]</span>.<a href="#section-1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="terminology">
@@ -1330,23 +1331,23 @@ _____  ____________________________________________________________
   1.   [Sends Full Packet]        --&gt;   [Receives Header Only]
         Format: IP|TCP|Payload              Format: IP|TCP
         DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMED
-        SEQ:    0                           SEQ:    0
+        SEQ:    X                           SEQ:    X
 
                                           (Receiver detects Payload
                                           removal via DSCP change)
 
                                   &lt;--    [Sends NACK Signal]
                                             Format: IP|TCP
-                                            Options: NACK 0
+                                            Options: NACK X
 
-  2.   Receive NACK 0
+  2.   Receive NACK X
         (Triggers instant recovery
         of original payload)
 
-        Retransmit P0             --&gt;    [Receives Full Packet]
+        Retransmit segment X      --&gt;    [Receives Full Packet]
         Format: IP|TCP|Payload              Format: IP|TCP|Payload
         DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMABLE
-        SEQ:    0                           SEQ:    0
+        SEQ:    X                           SEQ:    X
 </pre>
 </div>
 <figcaption><a href="#figure-3" class="selfRef">Figure 3</a></figcaption></figure>

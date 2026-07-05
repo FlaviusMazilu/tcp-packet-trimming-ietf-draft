@@ -5,8 +5,8 @@
 tcpm Working Group                                             F. Mazilu
 Internet-Draft                                                 V. Bobaru
 Intended status: Standards Track                               C. Raiciu
-Expires: 5 January 2027                                              UPB
-                                                             4 July 2026
+Expires: 6 January 2027                                              UPB
+                                                             5 July 2026
 
 
                      TCP Packet Trimming Extension
@@ -14,12 +14,12 @@ Expires: 5 January 2027                                              UPB
 
 Abstract
 
-   This document specifies a TCP extension for packet trimming.  When
-   switch buffers exceed a threshold, rather than silently dropping a
-   packet, the switch trims the payload and forwards the header.  This
-   allows the destination to issue a deterministic Negative
-   Acknowledgment (NACK), enabling faster, more deterministic loss
-   recovery.
+   This document specifies a TCP extension that enables TCP endpoints to
+   use packet trimming information when it is available.  When switch
+   buffers exceed a threshold, rather than silently dropping a packet,
+   the switch trims the payload and forwards the header.  This allows
+   the destination to issue a deterministic Negative Acknowledgment
+   (NACK), enabling faster, more deterministic loss recovery.
 
 Status of This Memo
 
@@ -36,7 +36,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 January 2027.
+   This Internet-Draft will expire on 6 January 2027.
 
 Copyright Notice
 
@@ -129,6 +129,14 @@ Table of Contents
    eliminating the need for the data sender to rely on heuristics to
    determine what to retransmit.
 
+   This document defines the TCP signaling and endpoint behavior needed
+   to use this information.  It does not specify how a network is
+   configured for packet trimming, which packets a switch chooses to
+   trim, or how DSCP values are provisioned inside an administrative
+   domain.  That network-side configuration is outside the scope of this
+   document; deployments can refer to the Ultra Ethernet Consortium
+   specifications [UEC-SPEC].
+
 2.  Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
@@ -199,23 +207,23 @@ Table of Contents
      1.   [Sends Full Packet]        -->   [Receives Header Only]
            Format: IP|TCP|Payload              Format: IP|TCP
            DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMED
-           SEQ:    0                           SEQ:    0
+           SEQ:    X                           SEQ:    X
 
                                              (Receiver detects Payload
                                              removal via DSCP change)
 
                                      <--    [Sends NACK Signal]
                                                Format: IP|TCP
-                                               Options: NACK 0
+                                               Options: NACK X
 
-     2.   Receive NACK 0
+     2.   Receive NACK X
            (Triggers instant recovery
            of original payload)
 
-           Retransmit P0             -->    [Receives Full Packet]
+           Retransmit segment X      -->    [Receives Full Packet]
            Format: IP|TCP|Payload              Format: IP|TCP|Payload
            DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMABLE
-           SEQ:    0                           SEQ:    0
+           SEQ:    X                           SEQ:    X
 
                                   Figure 3
 

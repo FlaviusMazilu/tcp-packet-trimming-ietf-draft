@@ -1080,7 +1080,7 @@ svg {
 </div>
 <div class="author">
       <div class="author-name">C. Raiciu</div>
-<div class="org">UPB</div>
+<div class="org">UPB/Broadcom</div>
 </div>
 </dd>
 </dl>
@@ -1155,6 +1155,9 @@ svg {
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
                 <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-basic-trimming-packet-flow" class="internal xref">Basic Trimming Packet Flow</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-effects-of-trimming-on-tcp-" class="internal xref">Effects of Trimming on TCP Checksum and Payload</a></p>
 </li>
             </ul>
 </li>
@@ -1354,6 +1357,15 @@ _____  ____________________________________________________________
 </div>
 </section>
 </div>
+<div id="effects-of-trimming-on-tcp-checksum-and-payload">
+<section id="section-3.4">
+        <h3 id="name-effects-of-trimming-on-tcp-">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-effects-of-trimming-on-tcp-" class="section-name selfRef">Effects of Trimming on TCP Checksum and Payload</a>
+        </h3>
+<p id="section-3.4-1">When a switch trims a packet, it updates the relevant IP header fields, including Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header <span>[<a href="#RFC9293" class="cite xref">RFC9293</a>]</span>. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">Switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP headers to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment. Since the TCP checksum is invalid, the integrity of this data cannot be verified.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="data-receiver-behavior-upon-receiving-a-trimmed-packet">
@@ -1366,17 +1378,8 @@ _____  ____________________________________________________________
         <h3 id="name-bypassing-tcp-checksum-vali">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-bypassing-tcp-checksum-vali" class="section-name selfRef">Bypassing TCP Checksum Validation</a>
         </h3>
-<p id="section-4.1-1">When a network switch experiences congestion, it trims the payload of a packet rather than dropping it entirely. In this scenario, the switch updates the relevant IP header fields: Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header <span>[<a href="#RFC9293" class="cite xref">RFC9293</a>]</span>. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
-<p id="section-4.1-2">For this reason, when a TCP data receiver identifies a trimmed packet, specifically, by observing the DSCP_TRIMMED codepoint in the IP header, it MUST skip the standard TCP checksum verification.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">While bypassing checksum validation carries inherent risks, a trimmed packet is processed exclusively for the information contained within its TCP header: identifying the connection tuple and the sequence number. The receiver MUST NOT process or deliver any payload data from this packet to the application layer. The potential failure modes of an undetected header corruption in this case are minimal:<a href="#section-4.1-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-4.1-4.1">
-            <p id="section-4.1-4.1.1">Corrupted Port Numbers: If the source or destination port is corrupted, the receiver may fail to find a matching connection socket. The packet is silently discarded. If a false match occurs, the data receiver will issue a NACK for an unexpected sequence number, which the data sender will ignore, provided the sequence number does not match any unacknowledged packet. If the sender does falsely retransmit, the spurious retransmission will be mitigated by the receiver issuing a Duplicate Selective Acknowledgment (DSACK) <span>[<a href="#RFC2883" class="cite xref">RFC2883</a>]</span>, allowing the sender to revert any unwarranted congestion window reductions.<a href="#section-4.1-4.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.1-4.2">
-            <p id="section-4.1-4.2.1">Corrupted Sequence Number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence. As above, this results either in an ignored NACK or a spurious retransmission.<a href="#section-4.1-4.2.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+<p id="section-4.1-1">When a TCP data receiver identifies a trimmed packet by observing the DSCP_TRIMMED codepoint in the IP header, it MUST skip the standard TCP checksum verification for that packet, because trimming removes payload bytes that were covered by the original checksum. The receiver MUST process the packet only according to the trimmed-packet rules in this section; it MUST NOT treat the packet as ordinary TCP data.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The checksum effects of trimming are described in <a href="#effects-of-trimming-on-tcp-checksum-and-payload" class="auto internal xref">Section 3.4</a>. Security considerations for bypassing checksum validation are discussed in <a href="#risks-of-bypassing-the-tcp-checksum" class="auto internal xref">Section 10.2</a>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ignoring-remaining-payload">
@@ -1384,8 +1387,7 @@ _____  ____________________________________________________________
         <h3 id="name-ignoring-remaining-payload">
 <a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-ignoring-remaining-payload" class="section-name selfRef">Ignoring Remaining Payload</a>
         </h3>
-<p id="section-4.2-1">Network switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP header to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.2-2">Because the TCP checksum is invalid and the integrity of this data cannot be verified, the data receiver MUST NOT process or acknowledge any data payload remaining in the trimmed packet.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-1">A trimmed packet may still contain payload bytes after the TCP header. The data receiver MUST NOT process, acknowledge, or deliver any payload data remaining in the trimmed packet.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="generating-the-nack-packet">
@@ -1717,8 +1719,16 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
         <h3 id="name-risks-of-bypassing-the-tcp-">
 <a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-risks-of-bypassing-the-tcp-" class="section-name selfRef">Risks of Bypassing the TCP Checksum</a>
         </h3>
-<p id="section-10.2-1">As described in <a href="#bypassing-tcp-checksum-validation" class="auto internal xref">Section 4.1</a>, a receiver skips TCP checksum validation for a trimmed packet, because the checksum was computed over the original payload and is necessarily invalid once the payload has been removed. This weakens the end-to-end integrity check for the header of a trimmed packet, so corruption of those header fields may pass undetected.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
-<p id="section-10.2-2">The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see <a href="#ignoring-remaining-payload" class="auto internal xref">Section 4.2</a>). Undetected corruption therefore cannot deliver wrong data to the application; at worst it yields a NACK for the wrong connection or sequence number. A NACK that matches no connection is discarded, and a NACK with a wrong sequence number is bounded exactly as a forged NACK is: it is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK <span>[<a href="#RFC2883" class="cite xref">RFC2883</a>]</span>.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<p id="section-10.2-1">As described in <a href="#bypassing-tcp-checksum-validation" class="auto internal xref">Section 4.1</a>, a receiver skips TCP checksum validation for a trimmed packet. This weakens the end-to-end integrity check for the header of that packet, so corruption of those header fields may pass undetected. The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see <a href="#ignoring-remaining-payload" class="auto internal xref">Section 4.2</a>).<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">Undetected corruption can have the following effects:<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-3.1">
+            <p id="section-10.2-3.1.1">Corrupted port numbers: If the source or destination port is corrupted, the receiver may fail to find a matching connection socket and discard the packet. If a false match occurs, the receiver will issue a NACK for an unexpected sequence number, which the sender will ignore unless that sequence number matches an unacknowledged packet.<a href="#section-10.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-3.2">
+            <p id="section-10.2-3.2.1">Corrupted sequence number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence number. As with a forged NACK, this is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK <span>[<a href="#RFC2883" class="cite xref">RFC2883</a>]</span>.<a href="#section-10.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 <div id="dscp-remarking-and-priority-abuse">
@@ -1852,7 +1862,7 @@ Event  TCP DATA SENDER                            TCP DATA RECEIVER
 </address>
 <address class="vcard">
         <div dir="auto" class="left"><span class="fn nameRole">Costin Raiciu</span></div>
-<div dir="auto" class="left"><span class="org">UPB</span></div>
+<div dir="auto" class="left"><span class="org">UPB/Broadcom</span></div>
 <div class="email">
 <span>Email:</span>
 <a href="mailto:costin.raiciu@upb.ro" class="email">costin.raiciu@upb.ro</a>

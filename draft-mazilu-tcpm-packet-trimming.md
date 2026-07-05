@@ -67,7 +67,7 @@ informative:
 
 --- abstract
 
-This document specifies a TCP extension for packet trimming. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.
+This document specifies a TCP extension that enables TCP endpoints to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.
 
 
 --- middle
@@ -85,6 +85,8 @@ However, because these approaches are fundamentally heuristics, they can fail to
 Packet Trimming offers a deterministic alternative. Originally introduced in the Ultra Ethernet Consortium's specifications {{UEC-SPEC}}, this approach is gaining support in modern network switch hardware. When switch buffers get full or exceed a certain threshold (as in Active Queue Management), rather than silently dropping the packet, the switch trims the payload. It retains only the bytes up to the transport header and forwards this "trimmed" packet to the destination.
 
 By using Differentiated Services Code Point (DSCP) markings {{RFC2474}}, the network can inform the destination of the trimming event. The destination then issues a Negative Acknowledgment (NACK) carrying the specific sequence number of the affected packet, eliminating the need for the data sender to rely on heuristics to determine what to retransmit.
+
+This document defines the TCP signaling and endpoint behavior needed to use this information. It does not specify how a network is configured for packet trimming, which packets a switch chooses to trim, or how DSCP values are provisioned inside an administrative domain. That network-side configuration is outside the scope of this document; deployments can refer to the Ultra Ethernet Consortium specifications {{UEC-SPEC}}.
 
 
 # Terminology
@@ -142,23 +144,23 @@ _____  ____________________________________________________________
   1.   [Sends Full Packet]        -->   [Receives Header Only]
         Format: IP|TCP|Payload              Format: IP|TCP
         DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMED
-        SEQ:    0                           SEQ:    0
+        SEQ:    X                           SEQ:    X
 
                                           (Receiver detects Payload
                                           removal via DSCP change)
 
                                   <--    [Sends NACK Signal]
                                             Format: IP|TCP
-                                            Options: NACK 0
+                                            Options: NACK X
 
-  2.   Receive NACK 0
+  2.   Receive NACK X
         (Triggers instant recovery
         of original payload)
 
-        Retransmit P0             -->    [Receives Full Packet]
+        Retransmit segment X      -->    [Receives Full Packet]
         Format: IP|TCP|Payload              Format: IP|TCP|Payload
         DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMABLE
-        SEQ:    0                           SEQ:    0
+        SEQ:    X                           SEQ:    X
 ~~~~
 {: #fig-basic-trimming-packet-flow}
 

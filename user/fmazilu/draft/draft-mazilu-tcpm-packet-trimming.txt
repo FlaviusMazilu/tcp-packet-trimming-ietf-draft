@@ -15,8 +15,9 @@ Expires: 6 January 2027                                        C. Raiciu
 
 Abstract
 
-   This document specifies a TCP extension that enables TCP endpoints to
-   use packet trimming information when it is available.  When switch
+   This document specifies a TCP extension that enables TCP endpoints in
+   data center networks or similarly controlled administrative domains
+   to use packet trimming information when it is available.  When switch
    buffers exceed a threshold, rather than silently dropping a packet,
    the switch trims the payload and forwards the header.  This allows
    the destination to issue a deterministic Negative Acknowledgment
@@ -132,12 +133,13 @@ Table of Contents
    determine what to retransmit.
 
    This document defines the TCP signaling and endpoint behavior needed
-   to use this information.  It does not specify how a network is
-   configured for packet trimming, which packets a switch chooses to
-   trim, or how DSCP values are provisioned inside an administrative
-   domain.  That network-side configuration is outside the scope of this
-   document; deployments can refer to the Ultra Ethernet Consortium
-   specifications [UEC-SPEC].
+   to use this information in data center networks or similarly
+   controlled administrative domains.  It does not specify how a network
+   is configured for packet trimming, which packets a switch chooses to
+   trim, or how DSCP values are provisioned inside such a domain.  That
+   network-side configuration is outside the scope of this document;
+   deployments can refer to the Ultra Ethernet Consortium specifications
+   [UEC-SPEC].
 
 2.  Terminology
 
@@ -360,10 +362,13 @@ Table of Contents
    degrees of packet reordering without generating the false positive
    retransmissions common to DupAck heuristics.
 
-   However, over the public Internet, it should not be assumed that
-   every middlebox supports trimming.  Consequently, DupAck and RACK-TLP
-   MUST NOT be disabled.  Packet Trimming does not hinder their
-   functionality and can work cooperatively alongside these mechanisms.
+   This extension is scoped to data center networks or similarly
+   controlled administrative domains where the path can be configured
+   for packet trimming.  Outside such a trimming-enabled domain,
+   endpoints MUST NOT assume that the path supports trimming.
+   Consequently, DupAck and RACK-TLP MUST NOT be disabled in those
+   cases.  Packet Trimming does not hinder their functionality and can
+   work cooperatively alongside these mechanisms.
 
 7.1.  Interaction with RACK-TLP
 

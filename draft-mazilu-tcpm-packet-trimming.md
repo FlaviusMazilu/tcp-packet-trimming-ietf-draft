@@ -67,7 +67,7 @@ informative:
 
 --- abstract
 
-This document specifies a TCP extension that enables TCP endpoints to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.
+This document specifies a TCP extension that enables TCP endpoints in data center networks or similarly controlled administrative domains to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.
 
 
 --- middle
@@ -86,7 +86,7 @@ Packet Trimming offers a deterministic alternative. Originally introduced in the
 
 By using Differentiated Services Code Point (DSCP) markings {{RFC2474}}, the network can inform the destination of the trimming event. The destination then issues a Negative Acknowledgment (NACK) carrying the specific sequence number of the affected packet, eliminating the need for the data sender to rely on heuristics to determine what to retransmit.
 
-This document defines the TCP signaling and endpoint behavior needed to use this information. It does not specify how a network is configured for packet trimming, which packets a switch chooses to trim, or how DSCP values are provisioned inside an administrative domain. That network-side configuration is outside the scope of this document; deployments can refer to the Ultra Ethernet Consortium specifications {{UEC-SPEC}}.
+This document defines the TCP signaling and endpoint behavior needed to use this information in data center networks or similarly controlled administrative domains. It does not specify how a network is configured for packet trimming, which packets a switch chooses to trim, or how DSCP values are provisioned inside such a domain. That network-side configuration is outside the scope of this document; deployments can refer to the Ultra Ethernet Consortium specifications {{UEC-SPEC}}.
 
 
 # Terminology
@@ -233,7 +233,7 @@ A critical consideration is the DSCP value applied to the return NACK packets. T
 
 In a fully trimming-enabled network topology where every switch is capable of packet trimming, heuristic mechanisms like DupAck and RACK-TLP MAY be disabled. Packet Trimming naturally handles high degrees of packet reordering without generating the false positive retransmissions common to DupAck heuristics.
 
-However, over the public Internet, it should not be assumed that every middlebox supports trimming. Consequently, DupAck and RACK-TLP MUST NOT be disabled. Packet Trimming does not hinder their functionality and can work cooperatively alongside these mechanisms.
+This extension is scoped to data center networks or similarly controlled administrative domains where the path can be configured for packet trimming. Outside such a trimming-enabled domain, endpoints MUST NOT assume that the path supports trimming. Consequently, DupAck and RACK-TLP MUST NOT be disabled in those cases. Packet Trimming does not hinder their functionality and can work cooperatively alongside these mechanisms.
 
 
 ## Interaction with RACK-TLP

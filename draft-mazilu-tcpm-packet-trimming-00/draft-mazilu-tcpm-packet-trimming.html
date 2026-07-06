@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>TCP Packet Trimming Extension</title>
+<meta content="Flavius Romeo Mazilu" name="author">
+<meta content="Valentin Ionut Bobaru" name="author">
+<meta content="Costin Raiciu" name="author">
+<meta content="
+       This document specifies a TCP extension that enables TCP endpoints in data center networks or similarly controlled administrative domains to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="draft-mazilu-tcpm-packet-trimming-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.10.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mazilu-tcpm-packet-trimming.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">TCP Trimming</td>
+<td class="right">July 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Mazilu, et al.</td>
+<td class="center">Expires 7 January 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">tcpm Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mazilu-tcpm-packet-trimming-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-07-06" class="published">6 July 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-01-07">7 January 2027</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">F. Mazilu</div>
+<div class="org">UPB</div>
+</div>
+<div class="author">
+      <div class="author-name">V. Bobaru</div>
+<div class="org">UPB</div>
+</div>
+<div class="author">
+      <div class="author-name">C. Raiciu</div>
+<div class="org">UPB/Broadcom</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">TCP Packet Trimming Extension</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document specifies a TCP extension that enables TCP endpoints in data center networks or similarly controlled administrative domains to use packet trimming information when it is available. When switch buffers exceed a threshold, rather than silently dropping a packet, the switch trims the payload and forwards the header. This allows the destination to issue a deterministic Negative Acknowledgment (NACK), enabling faster, more deterministic loss recovery.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 7 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-tcp-extensions-for-packet-t" class="internal xref">TCP Extensions for Packet Trimming</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-capability-negotiation-trim" class="internal xref">Capability Negotiation (Trimming Permitted)</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-trimming-nack-option" class="internal xref">Trimming NACK Option</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-basic-trimming-packet-flow" class="internal xref">Basic Trimming Packet Flow</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-effects-of-trimming-on-tcp-" class="internal xref">Effects of Trimming on TCP Checksum and Payload</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-data-receiver-behavior-upon" class="internal xref">Data Receiver Behavior upon Receiving a Trimmed Packet</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-bypassing-tcp-checksum-vali" class="internal xref">Bypassing TCP Checksum Validation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-ignoring-remaining-payload" class="internal xref">Ignoring Remaining Payload</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-generating-the-nack-packet" class="internal xref">Generating the NACK Packet</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-data-sender-behavior-upon-r" class="internal xref">Data Sender Behavior upon Receiving a NACK</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-identifying-and-retransmitt" class="internal xref">Identifying and Retransmitting the Lost Segment</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-entering-fast-recovery" class="internal xref">Entering Fast Recovery</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-dscp-marking-strategy" class="internal xref">DSCP Marking Strategy</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-interaction-with-existing-l" class="internal xref">Interaction with Existing Loss Detection Mechanisms</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-interaction-with-rack-tlp" class="internal xref">Interaction with RACK-TLP</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-congestion-control-consider" class="internal xref">Congestion Control Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-tcp-options" class="internal xref">TCP Options</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-differentiated-services-cod" class="internal xref">Differentiated Services Codepoints</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-forged-nack-injection" class="internal xref">Forged NACK Injection</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-risks-of-bypassing-the-tcp-" class="internal xref">Risks of Bypassing the TCP Checksum</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-dscp-remarking-and-priority" class="internal xref">DSCP Remarking and Priority Abuse</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">TCP's congestion control relies primarily on packet loss as a signal of congestion, or Explicit Congestion Notification (ECN) <span>[<a href="#RFC3168" class="cite xref">RFC3168</a>]</span> as a proactive measure. The accuracy and speed of these signals are vital for a mechanism to adapt quickly and utilize available bandwidth efficiently.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">It is widely recognized that falling back to a Retransmission Timeout (RTO) <span>[<a href="#RFC6298" class="cite xref">RFC6298</a>]</span> is undesirable. RTOs are overly conservative, drastically reduce the congestion window to one segment, and impose a high latency penalty (traditionally bounded to a 1-second minimum, though modern implementations often use around 300 ms).<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">For these reasons, fast retransmit <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span> is always preferred, as it recovers from loss much faster. The duplicate acknowledgment (DupAck) heuristic was the first method introduced to achieve this, but it suffers in environments with high packet reordering, short flows, or when packets at the end of a flight are lost (tail loss). RACK-TLP <span>[<a href="#RFC8985" class="cite xref">RFC8985</a>]</span> represents a more modern approach, utilizing a Tail Loss Probe (TLP) for tail losses and replacing sequence-based DupAck counting with time-based inferences derived from per-segment transmit timestamps.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">However, because these approaches are fundamentally heuristics, they can fail to detect lost packets in time (forcing an RTO) or trigger false retransmissions, particularly in networks with significant packet reordering.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Packet Trimming offers a deterministic alternative. Originally introduced in the Ultra Ethernet Consortium's specifications <span>[<a href="#UEC-SPEC" class="cite xref">UEC-SPEC</a>]</span>, this approach is gaining support in modern network switch hardware. When switch buffers get full or exceed a certain threshold (as in Active Queue Management), rather than silently dropping the packet, the switch trims the payload. It retains only the bytes up to the transport header and forwards this "trimmed" packet to the destination.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">By using Differentiated Services Code Point (DSCP) markings <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span>, the network can inform the destination of the trimming event. The destination then issues a Negative Acknowledgment (NACK) carrying the specific sequence number of the affected packet, eliminating the need for the data sender to rely on heuristics to determine what to retransmit.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">This document defines the TCP signaling and endpoint behavior needed to use this information in data center networks or similarly controlled administrative domains. It does not specify how a network is configured for packet trimming, which packets a switch chooses to trim, or how DSCP values are provisioned inside such a domain. That network-side configuration is outside the scope of this document; deployments can refer to the Ultra Ethernet Consortium specifications <span>[<a href="#UEC-SPEC" class="cite xref">UEC-SPEC</a>]</span>.<a href="#section-1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminology">
+<section id="section-2">
+      <h2 id="name-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="tcp-extensions-for-packet-trimming">
+<section id="section-3">
+      <h2 id="name-tcp-extensions-for-packet-t">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-tcp-extensions-for-packet-t" class="section-name selfRef">TCP Extensions for Packet Trimming</a>
+      </h2>
+<p id="section-3-1">All additional state and signaling required between the two communicating hosts are carried as TCP options.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="capability-negotiation-trimming-permitted">
+<section id="section-3.1">
+        <h3 id="name-capability-negotiation-trim">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-capability-negotiation-trim" class="section-name selfRef">Capability Negotiation (Trimming Permitted)</a>
+        </h3>
+<p id="section-3.1-1">If both endpoints support packet trimming, they SHOULD set the DSCP_TRIMMABLE codepoint on all data packets. However, to prevent a scenario where a sender marks packets as trimmable but the receiver does not understand how to process trimmed packets or issue NACKs, capability negotiation is required.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">A new TCP option, Trimming Permitted, MUST be exchanged during the three-way handshake. Only if both the SYN and SYN+ACK packets carry this option will the subsequent data packets be considered trimmable. This option MUST NOT be set on non-SYN packets. It is similar in this regard to the SACK Permitted option <span>[<a href="#RFC2018" class="cite xref">RFC2018</a>]</span>.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">TCP Trimming Permitted Option Format:<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<div id="fig-trimming-permitted-option">
+<figure id="figure-1">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-3.1-4.1">
+<pre>
+    +----------+----------+
+    | Kind=TBD | Length=2 |
+    +----------+----------+
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a></figcaption></figure>
+</div>
+</section>
+</div>
+<div id="trimming-nack-option">
+<section id="section-3.2">
+        <h3 id="name-trimming-nack-option">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-trimming-nack-option" class="section-name selfRef">Trimming NACK Option</a>
+        </h3>
+<p id="section-3.2-1">When congestion occurs at a network switch along the path, the switch trims the payload of trimmable packets, updates the IP header to DSCP_TRIMMED, and forwards the header to the data receiver.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">Upon receiving a packet, the data receiver inspects the DSCP field. If the packet is marked as DSCP_TRIMMED, the receiver MUST immediately issue a new TCP packet with no data payload, carrying the Trimming NACK option. This option contains the sequence number of the trimmed packet. The receiver MAY include other options in this packet (e.g., SACK blocks <span>[<a href="#RFC2018" class="cite xref">RFC2018</a>]</span>); there is not any requirement for NACK to be the only option set.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">Trimming NACK Option Format:<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<div id="fig-trimming-nack-option-format">
+<figure id="figure-2">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-3.2-4.1">
+<pre>
+ Kind: TBD
+ Length: 6 bytes
+ Payload: 4 bytes (NACK sequence number)
+    +-----------+---------+------------+
+    | Kind= TBD | Length=6| Payload 4B |
+    +-----------+---------+------------+
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a></figcaption></figure>
+</div>
+</section>
+</div>
+<div id="basic-trimming-packet-flow">
+<section id="section-3.3">
+        <h3 id="name-basic-trimming-packet-flow">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-basic-trimming-packet-flow" class="section-name selfRef">Basic Trimming Packet Flow</a>
+        </h3>
+<p id="section-3.3-1">The following diagram illustrates the flow of packets when congestion occurs and a packet is trimmed:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<div id="fig-basic-trimming-packet-flow">
+<figure id="figure-3">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-3.3-2.1">
+<pre>
+Event  TCP DATA SENDER                     TCP DATA RECEIVER
+_____  ____________________________________________________________
+  1.   [Sends Full Packet]        --&gt;   [Receives Header Only]
+        Format: IP|TCP|Payload              Format: IP|TCP
+        DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMED
+        SEQ:    X                           SEQ:    X
+
+                                          (Receiver detects Payload
+                                          removal via DSCP change)
+
+                                  &lt;--    [Sends NACK Signal]
+                                            Format: IP|TCP
+                                            Options: NACK X
+
+  2.   Receive NACK X
+        (Triggers instant recovery
+        of original payload)
+
+        Retransmit segment X      --&gt;    [Receives Full Packet]
+        Format: IP|TCP|Payload              Format: IP|TCP|Payload
+        DSCP:   DSCP_TRIMMABLE              DSCP:   DSCP_TRIMMABLE
+        SEQ:    X                           SEQ:    X
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a></figcaption></figure>
+</div>
+</section>
+</div>
+<div id="effects-of-trimming-on-tcp-checksum-and-payload">
+<section id="section-3.4">
+        <h3 id="name-effects-of-trimming-on-tcp-">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-effects-of-trimming-on-tcp-" class="section-name selfRef">Effects of Trimming on TCP Checksum and Payload</a>
+        </h3>
+<p id="section-3.4-1">When a switch trims a packet, it updates the relevant IP header fields, including Total Length, Time to Live, Differentiated Services Code Point (DSCP), and IP Checksum. However, to avoid the high computational cost of parsing transport-layer headers, the switch does not update the TCP header <span>[<a href="#RFC9293" class="cite xref">RFC9293</a>]</span>. Consequently, the TCP checksum remains calculated against the original, full payload, rendering it invalid for the trimmed packet.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">Switches may not trim the payload precisely at the TCP header boundary, as doing so requires parsing variable-length TCP headers to locate the data offset. Therefore, a trimmed packet may still contain a partial payload fragment. Since the TCP checksum is invalid, the integrity of this data cannot be verified.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="data-receiver-behavior-upon-receiving-a-trimmed-packet">
+<section id="section-4">
+      <h2 id="name-data-receiver-behavior-upon">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-data-receiver-behavior-upon" class="section-name selfRef">Data Receiver Behavior upon Receiving a Trimmed Packet</a>
+      </h2>
+<div id="bypassing-tcp-checksum-validation">
+<section id="section-4.1">
+        <h3 id="name-bypassing-tcp-checksum-vali">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-bypassing-tcp-checksum-vali" class="section-name selfRef">Bypassing TCP Checksum Validation</a>
+        </h3>
+<p id="section-4.1-1">When a TCP data receiver identifies a trimmed packet by observing the DSCP_TRIMMED codepoint in the IP header, it MUST skip the standard TCP checksum verification for that packet, because trimming removes payload bytes that were covered by the original checksum. The receiver MUST process the packet only according to the trimmed-packet rules in this section; it MUST NOT treat the packet as ordinary TCP data.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The checksum effects of trimming are described in <a href="#effects-of-trimming-on-tcp-checksum-and-payload" class="auto internal xref">Section 3.4</a>. Security considerations for bypassing checksum validation are discussed in <a href="#risks-of-bypassing-the-tcp-checksum" class="auto internal xref">Section 10.2</a>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="ignoring-remaining-payload">
+<section id="section-4.2">
+        <h3 id="name-ignoring-remaining-payload">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-ignoring-remaining-payload" class="section-name selfRef">Ignoring Remaining Payload</a>
+        </h3>
+<p id="section-4.2-1">A trimmed packet may still contain payload bytes after the TCP header. The data receiver MUST NOT process, acknowledge, or deliver any payload data remaining in the trimmed packet.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="generating-the-nack-packet">
+<section id="section-4.3">
+        <h3 id="name-generating-the-nack-packet">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-generating-the-nack-packet" class="section-name selfRef">Generating the NACK Packet</a>
+        </h3>
+<p id="section-4.3-1">Upon processing a valid trimmed packet, the data receiver SHOULD immediately generate and transmit a new TCP packet to the data sender. This packet MUST NOT contain any payload data. It MUST include the NACK TCP option.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">The NACK option payload is 4 bytes in length and MUST contain the sequence number extracted from the received trimmed packet.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="data-sender-behavior-upon-receiving-a-nack">
+<section id="section-5">
+      <h2 id="name-data-sender-behavior-upon-r">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-data-sender-behavior-upon-r" class="section-name selfRef">Data Sender Behavior upon Receiving a NACK</a>
+      </h2>
+<div id="identifying-and-retransmitting-the-lost-segment">
+<section id="section-5.1">
+        <h3 id="name-identifying-and-retransmitt">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-identifying-and-retransmitt" class="section-name selfRef">Identifying and Retransmitting the Lost Segment</a>
+        </h3>
+<p id="section-5.1-1">Upon receiving a TCP packet containing a NACK option, the data sender should extract the sequence number from the NACK option payload and locate the corresponding unacknowledged data segment in its retransmission queue.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">Due to mechanisms such as TCP Segmentation Offload (TSO) or middlebox fragmentation, the sequence number reported in the NACK might not match the exact starting sequence number of a segment in the data sender's queue. The data sender should identify the segment where the sequence space covers the NACKed sequence number (i.e., Segment.SEQ &lt;= NACK.SEQ &lt; Segment.SEQ + Segment.LEN).<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">Once the appropriate segment is identified, the data sender MUST mark it as lost and SHOULD retransmit a SMSS starting from NACK sequence number immediately, subject to congestion window and flow control limits. If no unacknowledged segment covers the sequence number provided in the NACK (e.g., the segment has already been acknowledged or the NACK was spurious), the data sender MUST ignore the NACK and MUST NOT proceed to <a href="#entering-fast-recovery" class="auto internal xref">Section 5.2</a>.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="entering-fast-recovery">
+<section id="section-5.2">
+        <h3 id="name-entering-fast-recovery">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-entering-fast-recovery" class="section-name selfRef">Entering Fast Recovery</a>
+        </h3>
+<p id="section-5.2-1">If the sender successfully identifies and marks a segment as lost based on a NACK, it MUST enter Fast Recovery (as defined in <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span>), provided it is not already in a recovery phase.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A trimmed packet is an explicit signal of network congestion and packet loss. The data sender should anticipate that other packets within the same flight may have also been trimmed or dropped, which will be subsequently detected via additional NACKs, Duplicate ACKs, or RACK-TLP <span>[<a href="#RFC8985" class="cite xref">RFC8985</a>]</span> timer expirations. By entering Fast Recovery, the data sender ensures that the congestion window is appropriately updated just once for the entire loss episode, conforming to the principle that losses, regardless of the detection mechanism, constitute a unified indication of congestion.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="dscp-marking-strategy">
+<section id="section-6">
+      <h2 id="name-dscp-marking-strategy">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-dscp-marking-strategy" class="section-name selfRef">DSCP Marking Strategy</a>
+      </h2>
+<p id="section-6-1">This specification introduces the use of specific DSCP values to manage trimming behavior:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.1">
+          <p id="section-6-2.1.1">DSCP_TRIMMABLE: Applied by the sender to data packets eligible for trimming.<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.2">
+          <p id="section-6-2.2.1">DSCP_TRIMMED: Applied by a network switch after removing a packet's payload.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-3">Ideally, network switches should utilize at least two queues per port: a standard queue for DSCP_TRIMMABLE and regular traffic, and a high-priority queue for DSCP_TRIMMED and other control packets.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">Return Path DSCP for NACKs:<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">A critical consideration is the DSCP value applied to the return NACK packets. These should ideally bypass standard data low priority queue to reach the sender with minimal latency.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-6.1">
+          <p id="section-6-6.1.1">Alternative 1 (DSCP_TRIMMED): NACKs could use DSCP_TRIMMED. However, this requires demultiplexing at the sender to differentiate incoming NACKs from inbound data packets that were trimmed on the reverse path.<a href="#section-6-6.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.2">
+          <p id="section-6-6.2.1">Alternative 2 (DSCP_CONTROL): The optimal approach, echoing Ultra Ethernet Transport protocols, is to map control packets to a dedicated DSCP_CONTROL codepoint. NACKs, pure ACKs, and FINs can utilize this to achieve improved latency.<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-6.3">
+          <p id="section-6-6.3.1">Alternative 3 (DSCP_TRIMMABLE): NACKs are sent with standard data priority. This reduces the number of required DSCP values but sacrifices the latency advantage needed for rapid fast-recovery.<a href="#section-6-6.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="interaction-with-existing-loss-detection-mechanisms">
+<section id="section-7">
+      <h2 id="name-interaction-with-existing-l">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-interaction-with-existing-l" class="section-name selfRef">Interaction with Existing Loss Detection Mechanisms</a>
+      </h2>
+<p id="section-7-1">In a fully trimming-enabled network topology where every switch is capable of packet trimming, heuristic mechanisms like DupAck and RACK-TLP MAY be disabled. Packet Trimming naturally handles high degrees of packet reordering without generating the false positive retransmissions common to DupAck heuristics.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">This extension is scoped to data center networks or similarly controlled administrative domains where the path can be configured for packet trimming. Outside such a trimming-enabled domain, endpoints MUST NOT assume that the path supports trimming. Consequently, DupAck and RACK-TLP MUST NOT be disabled in those cases. Packet Trimming does not hinder their functionality and can work cooperatively alongside these mechanisms.<a href="#section-7-2" class="pilcrow">¶</a></p>
+<div id="interaction-with-rack-tlp">
+<section id="section-7.1">
+        <h3 id="name-interaction-with-rack-tlp">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-interaction-with-rack-tlp" class="section-name selfRef">Interaction with RACK-TLP</a>
+        </h3>
+<p id="section-7.1-1">Upon receiving a NACK, the data sender enters Fast Retransmit, retransmits the specified packet, and transitions to Fast Recovery. In this state, RACK-TLP continues to monitor for lost packets. RACK-TLP will not falsely retransmit the trimmed packet again because its internal RACK timer (based on rack.RTT + rack.reo_wnd) will not have expired for the newly retransmitted segment.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">Scenario A: Mixed Drop and Trim Events<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+<p id="section-7.1-3">If a flight contains both dropped and trimmed packets, NACKs and SACKs cooperatively recover the flight:<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+<div id="fig-mixed-drop-and-trim-events">
+<figure id="figure-4">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-7.1-4.1">
+<pre>
+Event  TCP DATA SENDER                        TCP DATA RECEIVER
+ _____  _________________________________________________________
+   1.   Send P0, P1, P2, P3          --&gt;
+        [P1 dropped by network]
+        [P2 trimmed by network]
+                                     &lt;--   Receive P0, ACK 0
+                                     &lt;--   Receive P2 (Trimmed),
+                                                NACK 2, ACK 0
+                                     &lt;--   Receive P3, ACK 0, SACK 3
+
+   2.   Receive ACK 0
+        Receive NACK 2, ACK 0
+        (NACK triggers immediate
+         retransmission of P2)
+        Retransmit P2                --&gt;
+                                     &lt;--          Receive P2, ACK 0,
+                                                     SACK 2, 3
+
+   3.   Receive ACK 0, SACK 2, 3
+        RACK-TLP timer expires
+        [Logic: Now() - P1_ts &gt; RTT + reo_wnd?]
+        (Condition = YES)
+        Retransmit P1                --&gt;
+                                     &lt;--          Receive P1, ACK 3
+</pre>
+</div>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a></figcaption></figure>
+</div>
+<p id="section-7.1-5">Scenario B: Delayed NACK / Preemptive SACK<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+<p id="section-7.1-6">If a SACK arrives before a NACK, and the rack.RTT + rack.reo_wnd threshold has not been met, no retransmission occurs. When the NACK subsequently arrives, P2 is instantly recovered. The succeeding ACK+SACK for P2 provides the necessary time-lapse evidence for RACK to securely declare P1 lost and trigger its retransmission. This improves the standard RACK-TLP behavior which would otherwise, in this scenario, wait 2 RTTs for sending a TLP probe. By having the NACK trigger a retransmission which would bring more SACK information does the same thing as a TLP probe would do but faster, in only 1 RTT.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<div id="fig-delayed-nack-preemptive-sack">
+<figure id="figure-5">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-7.1-7.1">
+<pre>
+Event  TCP DATA SENDER                           TCP DATA RECEIVER
+ _____  ____________________________________________________________
+   1.   Send P0, P1, P2, P3          --&gt;
+        [P1 dropped by network]
+        [P2 trimmed by network]
+                                     &lt;--   Receive P0, ACK 0
+                                     &lt;--   Receive P2 (Trimmed),
+                                                ACK 0, NACK 2
+                                     &lt;--   Receive P3, ACK 0, SACK 3
+
+   2.   Receive ACK 0
+        Receive ACK 0, SACK 3
+        [No retransmission yet:
+         Thresholds not met]
+
+   3.   Receive NACK 2, ACK 0
+        (Immediate recovery of P2)
+        Retransmit P2                --&gt;
+                                     &lt;--    Receive P2, ACK 0, SACK 2
+
+   4.   Receive ACK 0, SACK 2
+        (RACK: Since a later packet
+         P2 has been delivered, P1
+         is marked lost by time)
+        Retransmit P1                --&gt;
+                                     &lt;--      Receive P1, ACK 3
+                                            (All data now contiguous)
+</pre>
+</div>
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a></figcaption></figure>
+</div>
+<p id="section-7.1-8">(Implementation Note: To prevent redundant retransmissions in edge cases where a NACK arrives late but RACK has already retransmitted the segment, implementations MAY enforce a rule where NACK-driven retransmissions are ignored if the segment was already retransmitted within the last min_RTT.)<a href="#section-7.1-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="congestion-control-considerations">
+<section id="section-8">
+      <h2 id="name-congestion-control-consider">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-congestion-control-consider" class="section-name selfRef">Congestion Control Considerations</a>
+      </h2>
+<p id="section-8-1">A trimmed packet is an explicit and authoritative indication of network congestion: a switch removed the payload precisely because a queue exceeded its threshold. A NACK therefore conveys both a loss to be repaired and a congestion signal. A trimming sender MUST treat the receipt of a NACK as an indication of congestion and reduce its sending rate, as it would for a segment loss detected by other means <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">The precise magnitude of this reduction is left as future work. Because trimming reports loss on a per-segment basis, a sender learns the exact number of segments lost in a flight rather than merely inferring that at least one was lost, which may permit a more accurate response than a single multiplicative decrease per loss episode. Defining and evaluating such a response is an open item; this document requires only that the reaction to a NACK be no more aggressive than the standard response to an equivalent inferred loss <span>[<a href="#RFC5681" class="cite xref">RFC5681</a>]</span>.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">A retransmission triggered by a NACK is ordinary TCP data: it MUST remain subject to the congestion window and to the count of packets in flight, and MUST NOT bypass these limits. If the congestion window does not currently allow the retransmission, the retransmission is sent once the window permits.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-4">Because a NACK is generated only after a switch has actually removed a payload, the corresponding loss is never spurious; a sender SHOULD NOT undo a congestion-window reduction caused by a NACK. Reductions caused by inference-based mechanisms that remain enabled follow their own rules; see <a href="#interaction-with-existing-loss-detection-mechanisms" class="auto internal xref">Section 7</a>.<a href="#section-8-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-9">
+      <h2 id="name-iana-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="tcp-options">
+<section id="section-9.1">
+        <h3 id="name-tcp-options">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-tcp-options" class="section-name selfRef">TCP Options</a>
+        </h3>
+<p id="section-9.1-1">This document defines two new TCP options that require assignment from the "TCP Option Kind Numbers" registry <span>[<a href="#RFC9293" class="cite xref">RFC9293</a>]</span>. IANA is requested to assign two values:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Kind</th>
+              <th class="text-left" rowspan="1" colspan="1">Length</th>
+              <th class="text-left" rowspan="1" colspan="1">Meaning</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">TBD1</td>
+              <td class="text-left" rowspan="1" colspan="1">2</td>
+              <td class="text-left" rowspan="1" colspan="1">Trimming Permitted</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">TBD2</td>
+              <td class="text-left" rowspan="1" colspan="1">6</td>
+              <td class="text-left" rowspan="1" colspan="1">Trimming NACK</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-9.1-3">The option formats are specified in <a href="#capability-negotiation-trimming-permitted" class="auto internal xref">Section 3.1</a> and <a href="#trimming-nack-option" class="auto internal xref">Section 3.2</a>. Prior to the assignment of permanent Kind values, experimental deployments can carry these options using the shared experimental option Kinds and an Experiment Identifier as described in <span>[<a href="#RFC6994" class="cite xref">RFC6994</a>]</span>.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="differentiated-services-codepoints">
+<section id="section-9.2">
+        <h3 id="name-differentiated-services-cod">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-differentiated-services-cod" class="section-name selfRef">Differentiated Services Codepoints</a>
+        </h3>
+<p id="section-9.2-1">This document does not request any new assignments from the Differentiated Services Field Codepoints registry. The trimmable, trimmed, and control service classes used in this document (see <a href="#dscp-marking-strategy" class="auto internal xref">Section 6</a>) are realized with existing Differentiated Services codepoints <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span> selected by local or domain policy. The names DSCP_TRIMMABLE, DSCP_TRIMMED, and DSCP_CONTROL are placeholders for those locally configured codepoints and do not denote new codepoint assignments.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-10">
+      <h2 id="name-security-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-10-1">The mechanisms in this document add a new control signal, the NACK, and rely on Differentiated Services markings to convey trimming events. Packet trimming is primarily intended for deployment within a single administrative domain, such as a data center, where the path is largely trusted. The analysis below also notes the residual risks that apply when traffic crosses a less trusted path.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<div id="forged-nack-injection">
+<section id="section-10.1">
+        <h3 id="name-forged-nack-injection">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-forged-nack-injection" class="section-name selfRef">Forged NACK Injection</a>
+        </h3>
+<p id="section-10.1-1">An attacker who can inject a TCP segment carrying a forged Trimming NACK option for an existing connection can attempt to force the sender to retransmit a segment, wasting bandwidth and provoking an unwarranted reduction of the congestion window. Several factors bound this attack:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1-2.1">
+            <p id="section-10.1-2.1.1">A NACK is acted upon only when it arrives on a segment that passes the connection's normal demultiplexing checks. An off-path attacker must therefore guess the connection's four-tuple, as for any spoofed TCP segment.<a href="#section-10.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-2.2">
+            <p id="section-10.1-2.2.1">As required in <a href="#identifying-and-retransmitting-the-lost-segment" class="auto internal xref">Section 5.1</a>, the sender MUST ignore a NACK whose sequence number does not correspond to an outstanding unacknowledged segment. A forged NACK is effective only for an in-window sequence number, which confines the attack to the same blind in-window space analyzed in <span>[<a href="#RFC5961" class="cite xref">RFC5961</a>]</span>.<a href="#section-10.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.1-2.3">
+            <p id="section-10.1-2.3.1">A retransmission provoked by a forged NACK carries only data the receiver legitimately expects; it cannot cause the receiver to accept incorrect data. The impact is limited to wasted bandwidth and an unnecessary congestion-window reduction.<a href="#section-10.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.1-3">To bound the congestion impact, the response to a NACK SHOULD be no larger than the response to an equivalent loss inferred by other means, so that a forged NACK is no more damaging than a forged duplicate acknowledgment. Implementations MAY additionally rate-limit the retransmissions and congestion reactions driven by NACKs.<a href="#section-10.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="risks-of-bypassing-the-tcp-checksum">
+<section id="section-10.2">
+        <h3 id="name-risks-of-bypassing-the-tcp-">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-risks-of-bypassing-the-tcp-" class="section-name selfRef">Risks of Bypassing the TCP Checksum</a>
+        </h3>
+<p id="section-10.2-1">As described in <a href="#bypassing-tcp-checksum-validation" class="auto internal xref">Section 4.1</a>, a receiver skips TCP checksum validation for a trimmed packet. This weakens the end-to-end integrity check for the header of that packet, so corruption of those header fields may pass undetected. The consequences are bounded by the restricted use the receiver makes of a trimmed packet. The receiver reads only the connection four-tuple and the sequence number, and MUST NOT deliver any payload from a trimmed packet to the application (see <a href="#ignoring-remaining-payload" class="auto internal xref">Section 4.2</a>).<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-2">Undetected corruption can have the following effects:<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2-3.1">
+            <p id="section-10.2-3.1.1">Corrupted port numbers: If the source or destination port is corrupted, the receiver may fail to find a matching connection socket and discard the packet. If a false match occurs, the receiver will issue a NACK for an unexpected sequence number, which the sender will ignore unless that sequence number matches an unacknowledged packet.<a href="#section-10.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.2-3.2">
+            <p id="section-10.2-3.2.1">Corrupted sequence number: If the sequence number is corrupted, the receiver will issue a NACK for an incorrect sequence number. As with a forged NACK, this is ignored unless it falls within the outstanding window, and even then it can only cause a spurious retransmission, which the receiver disambiguates with a Duplicate SACK <span>[<a href="#RFC2883" class="cite xref">RFC2883</a>]</span>.<a href="#section-10.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="dscp-remarking-and-priority-abuse">
+<section id="section-10.3">
+        <h3 id="name-dscp-remarking-and-priority">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-dscp-remarking-and-priority" class="section-name selfRef">DSCP Remarking and Priority Abuse</a>
+        </h3>
+<p id="section-10.3-1">This specification places control traffic, including NACKs, and trimmed packets into higher-priority service classes than ordinary trimmable data (see <a href="#dscp-marking-strategy" class="auto internal xref">Section 6</a>). Where traffic can cross a trust boundary, this raises two DSCP-related concerns:<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.3-2.1">
+            <p id="section-10.3-2.1.1">Priority theft: an attacker that sets the control or trimmed-class codepoint on its own traffic could obtain preferential queueing, claiming an unfair share of capacity or degrading the latency of legitimate control traffic.<a href="#section-10.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-10.3-2.2">
+            <p id="section-10.3-2.2.1">Trimming evasion: an attacker that clears the trimmable codepoint on its flows could render them ineligible for trimming, escaping the congestion response that trimming imposes and competing unfairly with conforming flows.<a href="#section-10.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-10.3-3">Both are instances of the general Differentiated Services trust model <span>[<a href="#RFC2474" class="cite xref">RFC2474</a>]</span> <span>[<a href="#RFC2475" class="cite xref">RFC2475</a>]</span>: DSCP markings arriving from outside a trust boundary cannot be relied upon. A trimming-enabled domain MUST treat its boundary as a trust boundary and police or re-mark the DSCP of ingress traffic, so that the trimmable, trimmed, and control codepoints carry their intended meaning only within the domain that enforces them.<a href="#section-10.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9293">[RFC9293]</dt>
+        <dd>
+<span class="refAuthor">Eddy, W., Ed.</span>, <span class="refTitle">"Transmission Control Protocol (TCP)"</span>, <span class="seriesInfo">STD 7</span>, <span class="seriesInfo">RFC 9293</span>, <span class="seriesInfo">DOI 10.17487/RFC9293</span>, <time datetime="2022-08" class="refDate">August 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9293">https://www.rfc-editor.org/info/rfc9293</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2474">[RFC2474]</dt>
+        <dd>
+<span class="refAuthor">Nichols, K.</span>, <span class="refAuthor">Blake, S.</span>, <span class="refAuthor">Baker, F.</span>, and <span class="refAuthor">D. Black</span>, <span class="refTitle">"Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers"</span>, <span class="seriesInfo">RFC 2474</span>, <span class="seriesInfo">DOI 10.17487/RFC2474</span>, <time datetime="1998-12" class="refDate">December 1998</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2474">https://www.rfc-editor.org/info/rfc2474</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5681">[RFC5681]</dt>
+      <dd>
+<span class="refAuthor">Allman, M.</span>, <span class="refAuthor">Paxson, V.</span>, and <span class="refAuthor">E. Blanton</span>, <span class="refTitle">"TCP Congestion Control"</span>, <span class="seriesInfo">RFC 5681</span>, <span class="seriesInfo">DOI 10.17487/RFC5681</span>, <time datetime="2009-09" class="refDate">September 2009</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5681">https://www.rfc-editor.org/info/rfc5681</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2018">[RFC2018]</dt>
+        <dd>
+<span class="refAuthor">Mathis, M.</span>, <span class="refAuthor">Mahdavi, J.</span>, <span class="refAuthor">Floyd, S.</span>, and <span class="refAuthor">A. Romanow</span>, <span class="refTitle">"TCP Selective Acknowledgment Options"</span>, <span class="seriesInfo">RFC 2018</span>, <span class="seriesInfo">DOI 10.17487/RFC2018</span>, <time datetime="1996-10" class="refDate">October 1996</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2018">https://www.rfc-editor.org/info/rfc2018</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2475">[RFC2475]</dt>
+        <dd>
+<span class="refAuthor">Blake, S.</span>, <span class="refAuthor">Black, D.</span>, <span class="refAuthor">Carlson, M.</span>, <span class="refAuthor">Davies, E.</span>, <span class="refAuthor">Wang, Z.</span>, and <span class="refAuthor">W. Weiss</span>, <span class="refTitle">"An Architecture for Differentiated Services"</span>, <span class="seriesInfo">RFC 2475</span>, <span class="seriesInfo">DOI 10.17487/RFC2475</span>, <time datetime="1998-12" class="refDate">December 1998</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2475">https://www.rfc-editor.org/info/rfc2475</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2883">[RFC2883]</dt>
+        <dd>
+<span class="refAuthor">Floyd, S.</span>, <span class="refAuthor">Mahdavi, J.</span>, <span class="refAuthor">Mathis, M.</span>, and <span class="refAuthor">M. Podolsky</span>, <span class="refTitle">"An Extension to the Selective Acknowledgement (SACK) Option for TCP"</span>, <span class="seriesInfo">RFC 2883</span>, <span class="seriesInfo">DOI 10.17487/RFC2883</span>, <time datetime="2000-07" class="refDate">July 2000</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2883">https://www.rfc-editor.org/info/rfc2883</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC3168">[RFC3168]</dt>
+        <dd>
+<span class="refAuthor">Ramakrishnan, K.</span>, <span class="refAuthor">Floyd, S.</span>, and <span class="refAuthor">D. Black</span>, <span class="refTitle">"The Addition of Explicit Congestion Notification (ECN) to IP"</span>, <span class="seriesInfo">RFC 3168</span>, <span class="seriesInfo">DOI 10.17487/RFC3168</span>, <time datetime="2001-09" class="refDate">September 2001</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc3168">https://www.rfc-editor.org/info/rfc3168</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5961">[RFC5961]</dt>
+        <dd>
+<span class="refAuthor">Ramaiah, A.</span>, <span class="refAuthor">Stewart, R.</span>, and <span class="refAuthor">M. Dalal</span>, <span class="refTitle">"Improving TCP's Robustness to Blind In-Window Attacks"</span>, <span class="seriesInfo">RFC 5961</span>, <span class="seriesInfo">DOI 10.17487/RFC5961</span>, <time datetime="2010-08" class="refDate">August 2010</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc5961">https://www.rfc-editor.org/info/rfc5961</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6298">[RFC6298]</dt>
+        <dd>
+<span class="refAuthor">Paxson, V.</span>, <span class="refAuthor">Allman, M.</span>, <span class="refAuthor">Chu, J.</span>, and <span class="refAuthor">M. Sargent</span>, <span class="refTitle">"Computing TCP's Retransmission Timer"</span>, <span class="seriesInfo">RFC 6298</span>, <span class="seriesInfo">DOI 10.17487/RFC6298</span>, <time datetime="2011-06" class="refDate">June 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6298">https://www.rfc-editor.org/info/rfc6298</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6582">[RFC6582]</dt>
+        <dd>
+<span class="refAuthor">Henderson, T.</span>, <span class="refAuthor">Floyd, S.</span>, <span class="refAuthor">Gurtov, A.</span>, and <span class="refAuthor">Y. Nishida</span>, <span class="refTitle">"The NewReno Modification to TCP's Fast Recovery Algorithm"</span>, <span class="seriesInfo">RFC 6582</span>, <span class="seriesInfo">DOI 10.17487/RFC6582</span>, <time datetime="2012-04" class="refDate">April 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6582">https://www.rfc-editor.org/info/rfc6582</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6675">[RFC6675]</dt>
+        <dd>
+<span class="refAuthor">Blanton, E.</span>, <span class="refAuthor">Allman, M.</span>, <span class="refAuthor">Wang, L.</span>, <span class="refAuthor">Jarvinen, I.</span>, <span class="refAuthor">Kojo, M.</span>, and <span class="refAuthor">Y. Nishida</span>, <span class="refTitle">"A Conservative Loss Recovery Algorithm Based on Selective Acknowledgment (SACK) for TCP"</span>, <span class="seriesInfo">RFC 6675</span>, <span class="seriesInfo">DOI 10.17487/RFC6675</span>, <time datetime="2012-08" class="refDate">August 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6675">https://www.rfc-editor.org/info/rfc6675</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6994">[RFC6994]</dt>
+        <dd>
+<span class="refAuthor">Touch, J.</span>, <span class="refTitle">"Shared Use of Experimental TCP Options"</span>, <span class="seriesInfo">RFC 6994</span>, <span class="seriesInfo">DOI 10.17487/RFC6994</span>, <time datetime="2013-08" class="refDate">August 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6994">https://www.rfc-editor.org/info/rfc6994</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8985">[RFC8985]</dt>
+        <dd>
+<span class="refAuthor">Cheng, Y.</span>, <span class="refAuthor">Cardwell, N.</span>, <span class="refAuthor">Dukkipati, N.</span>, and <span class="refAuthor">P. Jha</span>, <span class="refTitle">"The RACK-TLP Loss Detection Algorithm for TCP"</span>, <span class="seriesInfo">RFC 8985</span>, <span class="seriesInfo">DOI 10.17487/RFC8985</span>, <time datetime="2021-02" class="refDate">February 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8985">https://www.rfc-editor.org/info/rfc8985</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="UEC-SPEC">[UEC-SPEC]</dt>
+      <dd>
+<span class="refAuthor">Ultra Ethernet Consortium</span>, <span class="refTitle">"Ultra Ethernet Consortium Specification 1.0"</span>, <time datetime="2025-06" class="refDate">June 2025</time>, <span>&lt;<a href="https://ultraethernet.org/">https://ultraethernet.org/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Flavius Romeo Mazilu</span></div>
+<div dir="auto" class="left"><span class="org">UPB</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:flavius.mazilu@stud.acs.upb.ro" class="email">flavius.mazilu@stud.acs.upb.ro</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Valentin Ionut Bobaru</span></div>
+<div dir="auto" class="left"><span class="org">UPB</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:valentin.bobaru@stud.acs.upb.ro" class="email">valentin.bobaru@stud.acs.upb.ro</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Costin Raiciu</span></div>
+<div dir="auto" class="left"><span class="org">UPB/Broadcom</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:costin.raiciu@upb.ro" class="email">costin.raiciu@upb.ro</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

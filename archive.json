@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-07-05T02:03:23.558991+00:00",
+  "timestamp": "2026-07-07T02:04:16.950435+00:00",
   "repo": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
   "labels": [
     {
@@ -63,13 +63,13 @@
       "labels": [],
       "body": "",
       "createdAt": "2026-06-10T20:23:44Z",
-      "updatedAt": "2026-07-04T08:01:31Z",
+      "updatedAt": "2026-07-05T14:18:07Z",
       "baseRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
       "baseRefName": "main",
       "baseRefOid": "dec361a16c6c2e8321f61fd0ad125ced0752ea95",
       "headRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
       "headRefName": "user/fmazilu/draft",
-      "headRefOid": "26f605d68fa222c317841722adb1374198ca39e3",
+      "headRefOid": "873c0d45e5da3c9e61250a81243d1c8e767ff9fc",
       "closedAt": null,
       "mergedAt": null,
       "mergedBy": null,

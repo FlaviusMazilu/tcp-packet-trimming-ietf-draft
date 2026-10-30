@@ -235,6 +235,15 @@ Table of Contents
    the options differ in any bit, both endpoints MUST disable trimming
    for the connection.
 
+   This DSCP negotiation mechanism also creates a foundation for
+   extending packet trimming across multiple administrative domains, or
+   even across the public Internet, provided that domain-border devices
+   translate DSCP values and rewrite the DSCP values carried in the
+   Trimming Permitted option so that both endpoints agree on a
+   consistent set of codepoints end-to-end.  Defining such translation
+   behavior is outside the scope of this document and is left for future
+   work.
+
 3.3.  Trimming NACK Option
 
    When congestion occurs at a network switch along the path, the switch

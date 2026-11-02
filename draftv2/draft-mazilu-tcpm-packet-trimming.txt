@@ -5,9 +5,9 @@
 tcpm Working Group                                             F. Mazilu
 Internet-Draft                                                 V. Bobaru
 Intended status: Standards Track                                     UPB
-Expires: 3 May 2027                                            C. Raiciu
+Expires: 6 May 2027                                            C. Raiciu
                                                             UPB/Broadcom
-                                                         30 October 2026
+                                                         2 November 2026
 
 
                      TCP Packet Trimming Extension
@@ -38,7 +38,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -427,12 +427,9 @@ Table of Contents
    defaults specified in Section 3.2 apply.  All six values are
    negotiated using the Trimming Permitted option.  Endpoints and
    switches MUST use only the exact negotiated values when marking or
-   recognizing trimming-related traffic.  The endpoint MUST recognize
-   every DSCP value in the negotiated profile, including
-   DSCP_TRIMMED_LASTHOP, because any switch along the path may set it
-   even if the endpoint itself does not originate packets with that
-   codepoint.  A packet carrying any other DSCP value MUST NOT be
-   treated as trimmable, trimmed, or trimming control traffic.
+   recognizing trimming-related traffic.  A packet carrying any other
+   DSCP value MUST NOT be treated as trimmable, trimmed, or trimming
+   control traffic.
 
    Ideally, network switches should utilize at least two queues per
    port: a standard queue for DSCP_TRIMMABLE and regular traffic, and a

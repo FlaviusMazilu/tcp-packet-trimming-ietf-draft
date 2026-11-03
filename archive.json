@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-11-01T03:11:53.017299+00:00",
+  "timestamp": "2026-11-03T04:32:59.090933+00:00",
   "repo": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
   "labels": [
     {
@@ -523,6 +523,32 @@
           ]
         }
       ]
+    },
+    {
+      "number": 2,
+      "id": "PR_kwDOS20dac8AAAABMHxHtQ",
+      "title": "Draft v2",
+      "url": "https://github.com/FlaviusMazilu/tcp-packet-trimming-ietf-draft/pull/2",
+      "state": "OPEN",
+      "author": "FlaviusMazilu",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2026-11-01T14:43:44Z",
+      "updatedAt": "2026-11-02T07:44:24Z",
+      "baseRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
+      "baseRefName": "user/fmazilu/draft",
+      "baseRefOid": "873c0d45e5da3c9e61250a81243d1c8e767ff9fc",
+      "headRepository": "FlaviusMazilu/tcp-packet-trimming-ietf-draft",
+      "headRefName": "draftv2",
+      "headRefOid": "97546f5e3f2b821ab4699b7bbc56ac1cc8057f40",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
     }
   ]
 }
